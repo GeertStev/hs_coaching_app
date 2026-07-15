@@ -3,12 +3,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
-import 'package:hs_coaching_app/features/auth/data/auth_providers.dart';
 import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
 import 'package:hs_coaching_app/features/display/features/image/domain/display_image.dart';
 
 final displayImageRepositoryProvider = Provider<DisplayImageRepository>((ref) {
-  return DisplayImageRepository(ref);
+  final firestore = ref.watch(firebaseFirestoreProvider);
+  final storage = ref.watch(firebaseStorageProvider);
+  final ids = ref.watch(displayDeviceIdsProvider);
+
+  return DisplayImageRepository(
+    firestore: firestore,
+    storage: storage,
+    clubId: ids.clubId,
+    displayId: ids.displayDeviceId,
+  );
 });
 
 /// Repository for managing display images in Firestore.
@@ -18,22 +26,28 @@ final displayImageRepositoryProvider = Provider<DisplayImageRepository>((ref) {
 /// `/clubs/{clubId}/displays/{displayId}/settings/image` holds the ID of the
 /// currently active image in a field named `currentId`.
 class DisplayImageRepository {
-  DisplayImageRepository(this._ref);
+  DisplayImageRepository({
+    required FirebaseFirestore firestore,
+    required FirebaseStorage storage,
+    required String clubId,
+    required String displayId,
+  }) : _firestore = firestore,
+       _storage = storage,
+       _clubId = clubId,
+       _displayId = displayId;
 
-  final Ref _ref;
-  FirebaseFirestore get _firestore => _ref.read(firebaseFirestoreProvider);
-  FirebaseStorage get _storage => _ref.read(firebaseStorageProvider);
+  final FirebaseFirestore _firestore;
+  final FirebaseStorage _storage;
+  final String _clubId;
+  final String _displayId;
 
   /// Reference to the 'images' collection for a specific display.
-  CollectionReference<DisplayImage> _imagesRef(
-    String clubId,
-    String displayId,
-  ) {
+  CollectionReference<DisplayImage> get _imagesRef {
     return _firestore
         .collection('clubs')
-        .doc(clubId)
+        .doc(_clubId)
         .collection('displays')
-        .doc(displayId)
+        .doc(_displayId)
         .collection('images')
         .withConverter<DisplayImage>(
           fromFirestore: (snapshot, _) =>
@@ -44,23 +58,22 @@ class DisplayImageRepository {
 
   /// Reference to the document that stores the active image ID.
   /// Path: `.../settings/image`
-  DocumentReference _currentImageRef(String clubId, String displayId) {
+  DocumentReference get _currentImageRef {
     return _firestore
         .collection('clubs')
-        .doc(clubId)
+        .doc(_clubId)
         .collection('displays')
-        .doc(displayId)
+        .doc(_displayId)
         .collection('settings')
         .doc('image');
   }
 
   /// Uploads an image file to Firebase Storage and returns the download URL.
   Future<String> _uploadImage(File imageFile) async {
-    final ids = _ref.read(displayDeviceIdsProvider);
     final fileName =
         '${DateTime.now().millisecondsSinceEpoch}_${imageFile.path.split('/').last}';
     final storageRef = _storage.ref().child(
-      'clubs/${ids.clubId}/${ids.displayDeviceId}/images/$fileName',
+      'clubs/$_clubId/$_displayId/images/$fileName',
     );
 
     final uploadTask = storageRef.putFile(imageFile);
@@ -74,6 +87,7 @@ class DisplayImageRepository {
   /// displayed one.
   Future<void> addImage({
     required File imageFile,
+    required String userId,
     String? title,
     String? description,
     List<String> tags = const [],
@@ -81,39 +95,30 @@ class DisplayImageRepository {
   }) async {
     final downloadUrl = await _uploadImage(imageFile);
 
-    final ids = _ref.read(displayDeviceIdsProvider);
-    final user = await _ref.read(appUserProvider.future);
-
-    if (user == null) {
-      throw Exception('User not authenticated');
-    }
-
     final newImageData = DisplayImage(
       id: '', // Firestore will generate this
       title: title?.isNotEmpty == true ? title : null,
       description: description?.isNotEmpty == true ? description : null,
       url: downloadUrl,
-      userId: user.uid,
+      userId: userId,
       timestamp: DateTime.now(),
       status: DisplayImageStatus.active,
       tags: tags,
     );
 
-    final imagesRef = _imagesRef(ids.clubId, ids.displayDeviceId);
-    final newImageDocRef = imagesRef.doc();
-
+    final newImageDocRef = _imagesRef.doc();
     final batch = _firestore.batch();
 
     batch.set(newImageDocRef, newImageData);
 
     if (setAsCurrent) {
-      batch.set(_currentImageRef(ids.clubId, ids.displayDeviceId), {
+      batch.set(_currentImageRef, {
         'currentId': newImageDocRef.id,
       }, SetOptions(merge: true));
     }
 
     if (tags.isNotEmpty) {
-      batch.set(_currentImageRef(ids.clubId, ids.displayDeviceId), {
+      batch.set(_currentImageRef, {
         'imageTags': FieldValue.arrayUnion(tags),
       }, SetOptions(merge: true));
     }
@@ -128,8 +133,7 @@ class DisplayImageRepository {
     String? description,
     List<String> tags = const [],
   }) async {
-    final ids = _ref.read(displayDeviceIdsProvider);
-    final imageDocRef = _imagesRef(ids.clubId, ids.displayDeviceId).doc(id);
+    final imageDocRef = _imagesRef.doc(id);
 
     final updateData = {
       'title': title?.isNotEmpty == true ? title : null,
@@ -144,7 +148,7 @@ class DisplayImageRepository {
 
     // 2. Atomically add any new tags to the global list
     if (tags.isNotEmpty) {
-      batch.set(_currentImageRef(ids.clubId, ids.displayDeviceId), {
+      batch.set(_currentImageRef, {
         'imageTags': FieldValue.arrayUnion(tags),
       }, SetOptions(merge: true));
     }
@@ -159,44 +163,34 @@ class DisplayImageRepository {
 
   /// Sets the ID in the 'current' document.
   Future<void> setCurrentImageId(String? imageId) async {
-    final ids = _ref.read(displayDeviceIdsProvider);
-    await _currentImageRef(
-      ids.clubId,
-      ids.displayDeviceId,
-    ).set({'currentId': imageId}, SetOptions(merge: true));
+    await _currentImageRef.set({'currentId': imageId}, SetOptions(merge: true));
   }
 
   /// Archives an image document.
   Future<void> archiveImage(String imageId) async {
-    final ids = _ref.read(displayDeviceIdsProvider);
-    await _imagesRef(
-      ids.clubId,
-      ids.displayDeviceId,
-    ).doc(imageId).update({'status': DisplayImageStatus.archived.name});
+    await _imagesRef.doc(imageId).update({
+      'status': DisplayImageStatus.archived.name,
+    });
   }
 
   /// Unarchives an image document, setting its status back to 'active'.
   Future<void> unarchiveImage(String imageId) async {
-    final ids = _ref.read(displayDeviceIdsProvider);
-    await _imagesRef(
-      ids.clubId,
-      ids.displayDeviceId,
-    ).doc(imageId).update({'status': DisplayImageStatus.active.name});
+    await _imagesRef.doc(imageId).update({
+      'status': DisplayImageStatus.active.name,
+    });
   }
 
   /// Returns a stream of the current image ID document.
   Stream<DocumentSnapshot> watchCurrentImageIdDoc() {
-    final ids = _ref.watch(displayDeviceIdsProvider);
-    return _currentImageRef(ids.clubId, ids.displayDeviceId).snapshots();
+    return _currentImageRef.snapshots();
   }
 
   /// Fetches a specific image document by its ID.
   Stream<DisplayImage?> _getImageStreamById(String imageId) {
-    final ids = _ref.watch(displayDeviceIdsProvider);
-    return _imagesRef(
-      ids.clubId,
-      ids.displayDeviceId,
-    ).doc(imageId).snapshots().map((snapshot) => snapshot.data());
+    return _imagesRef
+        .doc(imageId)
+        .snapshots()
+        .map((snapshot) => snapshot.data());
   }
 
   /// Watches the currently active display image.
@@ -211,11 +205,10 @@ class DisplayImageRepository {
 
   /// Returns a stream of all active image documents, ordered by timestamp.
   Stream<List<DisplayImage>> watchAllActiveImages({String? tag}) {
-    final ids = _ref.watch(displayDeviceIdsProvider);
-    Query<DisplayImage> query = _imagesRef(
-      ids.clubId,
-      ids.displayDeviceId,
-    ).where('status', isEqualTo: DisplayImageStatus.active.name);
+    Query<DisplayImage> query = _imagesRef.where(
+      'status',
+      isEqualTo: DisplayImageStatus.active.name,
+    );
 
     if (tag != null) {
       query = query.where('tags', arrayContains: tag);
@@ -229,10 +222,7 @@ class DisplayImageRepository {
 
   /// Returns a stream of the list of all used image tags.
   Stream<List<String>> watchAllImageTags() {
-    final ids = _ref.watch(displayDeviceIdsProvider);
-    return _currentImageRef(ids.clubId, ids.displayDeviceId).snapshots().map((
-      snapshot,
-    ) {
+    return _currentImageRef.snapshots().map((snapshot) {
       final data = snapshot.data() as Map<String, dynamic>?;
       return List<String>.from(data?['imageTags'] ?? []);
     });

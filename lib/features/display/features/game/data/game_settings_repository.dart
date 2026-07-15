@@ -6,34 +6,45 @@ import 'package:hs_coaching_app/features/display/features/game/domain/game_setti
 
 /// Provider for the game settings repository.
 final gameSettingsRepositoryProvider = Provider<GameSettingsRepository>((ref) {
-  return GameSettingsRepository(ref);
+  final firestore = ref.watch(firebaseFirestoreProvider);
+  final ids = ref.watch(displayDeviceIdsProvider);
+
+  return GameSettingsRepository(
+    firestore: firestore,
+    clubId: ids.clubId,
+    displayId: ids.displayDeviceId,
+  );
 });
 
 /// A repository for managing game-related settings in Firestore.
 class GameSettingsRepository {
-  GameSettingsRepository(this._ref);
+  GameSettingsRepository({
+    required FirebaseFirestore firestore,
+    required String clubId,
+    required String displayId,
+  }) : _firestore = firestore,
+       _clubId = clubId,
+       _displayId = displayId;
 
-  final Ref _ref;
-  FirebaseFirestore get _firestore => _ref.read(firebaseFirestoreProvider);
+  final FirebaseFirestore _firestore;
+  final String _clubId;
+  final String _displayId;
 
   /// Reference to the 'game' settings document for a specific display.
   /// Path: /clubs/{clubId}/displays/{displayDeviceId}/settings/game
-  DocumentReference _gameSettingsRef(String clubId, String displayId) {
+  DocumentReference get _gameSettingsRef {
     return _firestore
         .collection('clubs')
-        .doc(clubId)
+        .doc(_clubId)
         .collection('displays')
-        .doc(displayId)
+        .doc(_displayId)
         .collection('settings')
         .doc('game');
   }
 
   /// Returns a stream of the current game settings.
   Stream<GameSettings> watchGameSettings() {
-    final ids = _ref.watch(displayDeviceIdsProvider);
-    return _gameSettingsRef(ids.clubId, ids.displayDeviceId).snapshots().map((
-      snapshot,
-    ) {
+    return _gameSettingsRef.snapshots().map((snapshot) {
       if (!snapshot.exists || snapshot.data() == null) {
         return const GameSettings(); // Default settings if document doesn't exist
       }
@@ -45,31 +56,26 @@ class GameSettingsRepository {
   ///
   /// Uses `FieldValue.increment` for atomic updates.
   Future<void> incrementScore(bool isBlack) async {
-    final ids = _ref.read(displayDeviceIdsProvider);
     final field = isBlack ? 'blackScore' : 'whiteScore';
-    await _gameSettingsRef(
-      ids.clubId,
-      ids.displayDeviceId,
-    ).set({field: FieldValue.increment(1)}, SetOptions(merge: true));
+    await _gameSettingsRef.set({
+      field: FieldValue.increment(1),
+    }, SetOptions(merge: true));
   }
 
   /// Decrements the score for a given team, ensuring it doesn't go below zero.
   Future<void> decrementScore(bool isBlack, int currentScore) async {
     if (currentScore <= 0) return; // Prevent negative scores
-    final ids = _ref.read(displayDeviceIdsProvider);
     final field = isBlack ? 'blackScore' : 'whiteScore';
-    await _gameSettingsRef(
-      ids.clubId,
-      ids.displayDeviceId,
-    ).set({field: FieldValue.increment(-1)}, SetOptions(merge: true));
+    await _gameSettingsRef.set({
+      field: FieldValue.increment(-1),
+    }, SetOptions(merge: true));
   }
 
   /// Resets both team scores to 0.
   Future<void> resetScores() async {
-    final ids = _ref.read(displayDeviceIdsProvider);
-    await _gameSettingsRef(
-      ids.clubId,
-      ids.displayDeviceId,
-    ).set({'blackScore': 0, 'whiteScore': 0}, SetOptions(merge: true));
+    await _gameSettingsRef.set({
+      'blackScore': 0,
+      'whiteScore': 0,
+    }, SetOptions(merge: true));
   }
 }

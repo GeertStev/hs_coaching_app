@@ -4,7 +4,8 @@ import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_e
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_providers.dart';
 
 class Toolbar extends ConsumerWidget {
-  const Toolbar({super.key});
+  const Toolbar({super.key, required this.sketchId});
+  final String sketchId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -212,23 +213,21 @@ class Toolbar extends ConsumerWidget {
                 icon: const Icon(Icons.undo),
                 tooltip: 'Undo',
                 onPressed: commandHistoryState.canUndo
-                    ? commandHistoryNotifier.undo
+                    ? () => commandHistoryNotifier.undo(sketchId)
                     : null,
               ),
               IconButton(
                 icon: const Icon(Icons.redo),
                 tooltip: 'Redo',
                 onPressed: commandHistoryState.canRedo
-                    ? commandHistoryNotifier.redo
+                    ? () => commandHistoryNotifier.redo(sketchId)
                     : null,
               ),
               IconButton(
                 icon: const Icon(Icons.delete_forever),
                 tooltip: 'Clear All',
-                onPressed: () {
-                  // Clearing is a destructive action and might not be undoable with this simple setup.
-                  ref.read(sketchRepositoryProvider).clearSketch();
-                },
+                onPressed: () =>
+                    ref.read(sketchRepositoryProvider).clearSketch(sketchId),
               ),
             ],
           ),

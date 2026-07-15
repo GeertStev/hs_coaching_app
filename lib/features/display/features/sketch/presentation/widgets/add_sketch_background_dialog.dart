@@ -65,6 +65,12 @@ class _AddSketchBackgroundDialogState
     }
   }
 
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
   Future<void> _uploadBackground() async {
     if (_imageFile == null || !_formKey.currentState!.validate() || !mounted) {
       return;

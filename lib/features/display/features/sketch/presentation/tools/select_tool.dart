@@ -23,7 +23,12 @@ class SelectTool implements Tool {
     _selectedElement = null; // Reset on new pan
     _interactionMode = _InteractionMode.none;
 
-    final elements = state.ref.read(sketchElementsStreamProvider).value ?? [];
+    //final elements = state.ref.read(sketchElementsStreamProvider).value ?? [];
+    final elements =
+        state.ref
+            .read(sketchElementsStreamProvider(state.widget.sketchId))
+            .value ??
+        [];
     final selectedId = state.ref.read(selectedElementIdProvider);
 
     // Check for interaction with an already selected element's handles
@@ -151,7 +156,12 @@ class SelectTool implements Tool {
       _selectElementAt(tappedPoint, state);
       return;
     }
-    final elements = state.ref.read(sketchElementsStreamProvider).value ?? [];
+    //final elements = state.ref.read(sketchElementsStreamProvider).value ?? [];
+    final elements =
+        state.ref
+            .read(sketchElementsStreamProvider(state.widget.sketchId))
+            .value ??
+        [];
     SketchElement? selectedElement;
     try {
       selectedElement = elements.firstWhere((e) => e.id == selectedId);
@@ -194,7 +204,12 @@ class SelectTool implements Tool {
     final selectedElementIdNotifier = state.ref.read(
       selectedElementIdProvider.notifier,
     );
-    final elements = state.ref.read(sketchElementsStreamProvider).value ?? [];
+    //final elements = state.ref.read(sketchElementsStreamProvider).value ?? [];
+    final elements =
+        state.ref
+            .read(sketchElementsStreamProvider(state.widget.sketchId))
+            .value ??
+        [];
 
     for (final element in elements.reversed) {
       final rect = SketchPainter.getBoundingBox(

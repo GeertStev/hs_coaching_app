@@ -1,23 +1,27 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
-import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
 import 'package:hs_coaching_app/features/display/features/timer/domain/timer_exercise.dart';
 import 'package:hs_coaching_app/features/display/features/timer/domain/timer_set.dart';
 import 'package:hs_coaching_app/features/display/features/timer/domain/timer_state.dart';
 
 class TimerRepository {
-  TimerRepository(this._ref);
+  TimerRepository({
+    required FirebaseFirestore firestore,
+    required String clubId,
+    required String displayId,
+  }) : _firestore = firestore,
+       _clubId = clubId,
+       _displayId = displayId;
 
-  final Ref _ref;
-  FirebaseFirestore get _firestore => _ref.read(firebaseFirestoreProvider);
+  final FirebaseFirestore _firestore;
+  final String _clubId;
+  final String _displayId;
 
   // --- Collection References ---
 
-  CollectionReference<TimerExercise> _timerExercisesRef(String clubId) {
+  CollectionReference<TimerExercise> get _timerExercisesRef {
     return _firestore
         .collection('clubs')
-        .doc(clubId)
+        .doc(_clubId)
         .collection('timerExercises')
         .withConverter<TimerExercise>(
           fromFirestore: (snapshot, _) => TimerExercise.fromFirestore(snapshot),
@@ -25,10 +29,10 @@ class TimerRepository {
         );
   }
 
-  CollectionReference<TimerSet> _timerSetsRef(String clubId) {
+  CollectionReference<TimerSet> get _timerSetsRef {
     return _firestore
         .collection('clubs')
-        .doc(clubId)
+        .doc(_clubId)
         .collection('timerSets')
         .withConverter<TimerSet>(
           fromFirestore: (snapshot, _) => TimerSet.fromFirestore(snapshot),
@@ -36,24 +40,24 @@ class TimerRepository {
         );
   }
 
-  DocumentReference _timerStateRef(String clubId, String displayId) {
+  DocumentReference get _timerStateRef {
     return _firestore
         .collection('clubs')
-        .doc(clubId)
+        .doc(_clubId)
         .collection('displays')
-        .doc(displayId)
+        .doc(_displayId)
         .collection('settings')
         .doc('timer');
   }
 
   /// Reference to the document that stores timer settings like tags.
   /// Path: `.../settings/timer`
-  DocumentReference _timerSettingsRef(String clubId, String displayId) {
+  DocumentReference get _timerSettingsRef {
     return _firestore
         .collection('clubs')
-        .doc(clubId)
+        .doc(_clubId)
         .collection('displays')
-        .doc(displayId)
+        .doc(_displayId)
         .collection('settings')
         .doc('timer');
   }
@@ -61,35 +65,30 @@ class TimerRepository {
   // --- TimerExercise Methods ---
 
   Stream<List<TimerExercise>> watchAllTimerExercises() {
-    final ids = _ref.watch(displayDeviceIdsProvider);
-    return _timerExercisesRef(ids.clubId)
+    return _timerExercisesRef
         .orderBy('updatedAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
   Future<void> addTimerExercise(TimerExercise exercise) {
-    final ids = _ref.read(displayDeviceIdsProvider);
-    return _timerExercisesRef(ids.clubId).add(exercise);
+    return _timerExercisesRef.add(exercise);
   }
 
   Future<void> updateTimerExercise(TimerExercise exercise) {
-    final ids = _ref.read(displayDeviceIdsProvider);
-    return _timerExercisesRef(ids.clubId)
+    return _timerExercisesRef
         .doc(exercise.id)
         .update(exercise.copyWith(updatedAt: DateTime.now()).toJson());
   }
 
   Future<void> deleteTimerExercise(String exerciseId) {
-    final ids = _ref.read(displayDeviceIdsProvider);
-    return _timerExercisesRef(ids.clubId).doc(exerciseId).delete();
+    return _timerExercisesRef.doc(exerciseId).delete();
   }
 
   // --- TimerSet Methods ---
 
   Stream<List<TimerSet>> watchAllTimerSets({String? tag}) {
-    final ids = _ref.watch(displayDeviceIdsProvider);
-    Query<TimerSet> query = _timerSetsRef(ids.clubId);
+    Query<TimerSet> query = _timerSetsRef;
 
     if (tag != null) {
       query = query.where('tags', arrayContains: tag);
@@ -102,14 +101,13 @@ class TimerRepository {
   }
 
   Future<void> addTimerSet(TimerSet timerSet) {
-    final ids = _ref.read(displayDeviceIdsProvider);
     final batch = _firestore.batch();
-    final newDoc = _timerSetsRef(ids.clubId).doc();
+    final newDoc = _timerSetsRef.doc();
 
     batch.set(newDoc, timerSet);
 
     if (timerSet.tags.isNotEmpty) {
-      batch.set(_timerSettingsRef(ids.clubId, ids.displayDeviceId), {
+      batch.set(_timerSettingsRef, {
         'timerTags': FieldValue.arrayUnion(timerSet.tags),
       }, SetOptions(merge: true));
     }
@@ -118,14 +116,13 @@ class TimerRepository {
   }
 
   Future<void> updateTimerSet(TimerSet timerSet) {
-    final ids = _ref.read(displayDeviceIdsProvider);
     final batch = _firestore.batch();
-    final docRef = _timerSetsRef(ids.clubId).doc(timerSet.id);
+    final docRef = _timerSetsRef.doc(timerSet.id);
 
     batch.update(docRef, timerSet.copyWith(updatedAt: DateTime.now()).toJson());
 
     if (timerSet.tags.isNotEmpty) {
-      batch.set(_timerSettingsRef(ids.clubId, ids.displayDeviceId), {
+      batch.set(_timerSettingsRef, {
         'timerTags': FieldValue.arrayUnion(timerSet.tags),
       }, SetOptions(merge: true));
     }
@@ -134,15 +131,13 @@ class TimerRepository {
   }
 
   Future<void> deleteTimerSet(String setId) {
-    final ids = _ref.read(displayDeviceIdsProvider);
-    return _timerSetsRef(ids.clubId).doc(setId).delete();
+    return _timerSetsRef.doc(setId).delete();
   }
 
   // --- TimerState Methods ---
 
   Stream<TimerState> watchTimerState() {
-    final ids = _ref.watch(displayDeviceIdsProvider);
-    return _timerStateRef(ids.clubId, ids.displayDeviceId).snapshots().map(
+    return _timerStateRef.snapshots().map(
       (snapshot) => snapshot.exists
           ? TimerState.fromJson(snapshot.data() as Map<String, dynamic>)
           : const TimerState(),
@@ -151,10 +146,7 @@ class TimerRepository {
 
   /// Returns a stream of the list of all used timer set tags.
   Stream<List<String>> watchAllTimerSetTags() {
-    final ids = _ref.watch(displayDeviceIdsProvider);
-    return _timerSettingsRef(ids.clubId, ids.displayDeviceId).snapshots().map((
-      snapshot,
-    ) {
+    return _timerSettingsRef.snapshots().map((snapshot) {
       final data = snapshot.data() as Map<String, dynamic>?;
       return List<String>.from(data?['timerTags'] ?? []);
     });

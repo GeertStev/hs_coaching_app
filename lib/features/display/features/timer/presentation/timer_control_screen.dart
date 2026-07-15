@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/features/auth/data/auth_providers.dart';
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
 import 'package:hs_coaching_app/features/display/features/timer/data/timer_providers.dart';
 import 'package:hs_coaching_app/features/display/features/timer/domain/timer_set.dart';
+import 'package:hs_coaching_app/features/display/features/timer/presentation/timer_controller.dart';
 import 'package:hs_coaching_app/features/display/features/timer/presentation/widgets/timer_set_list.dart';
 import 'package:hs_coaching_app/features/display/features/timer/presentation/widgets/timer_set_content_editor.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
@@ -15,6 +15,15 @@ class TimerControlScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Luister naar de controller voor eventuele fouten tijdens mutaties
+    ref.listen<AsyncValue<void>>(timerControllerProvider, (_, state) {
+      if (state.hasError && !state.isLoading) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fout bij het opslaan: ${state.error}')),
+        );
+      }
+    });
+
     Future<void> showAddTimerSheet() async {
       int restBetween = 30;
       List<ExerciseInSet> exercises = [];
@@ -27,7 +36,7 @@ class TimerControlScreen extends ConsumerWidget {
           dialogTitle: 'Add Timer Set',
           allTags: allTags,
           isNewItem: true,
-          showSecondaryAction: false, // 'Add to List' is not used here
+          showSecondaryAction: false,
           contentSpecificWidget: TimerSetContentEditor(
             onChanged: (newRest, newExercises) {
               restBetween = newRest;
@@ -37,25 +46,20 @@ class TimerControlScreen extends ConsumerWidget {
         ),
       );
 
-      final ownerId = ref.read(appUserProvider).value?.uid;
-      if (result == null ||
-          result.action == DialogAction.cancel ||
-          ownerId == null) {
-        return; // User cancelled or is not logged in
+      if (result == null || result.action == DialogAction.cancel) {
+        return; // User cancelled
       }
 
-      final newSet = TimerSet(
-        title: result.title,
-        description: result.description,
-        restBetweenExercisesSeconds: restBetween,
-        exercises: exercises,
-        ownerId: ownerId,
-        tags: result.tags,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      await ref.read(timerRepositoryProvider).addTimerSet(newSet);
+      // Controller regelt het toevoegen, incl. ophalen van de huidige user
+      ref
+          .read(timerControllerProvider.notifier)
+          .addTimerSet(
+            title: result.title,
+            description: result.description,
+            restBetweenExercisesSeconds: restBetween,
+            exercises: exercises,
+            tags: result.tags,
+          );
     }
 
     return ContentControlScreen(

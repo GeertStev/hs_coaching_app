@@ -1,32 +1,33 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
-import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
 import 'package:hs_coaching_app/features/display/features/chrono/domain/chrono.dart';
 
 class ChronoRepository {
-  ChronoRepository(this._ref);
+  ChronoRepository({
+    required FirebaseFirestore firestore,
+    required String clubId,
+    required String displayId,
+  }) : _firestore = firestore,
+       _clubId = clubId,
+       _displayId = displayId;
 
-  final Ref _ref;
-  FirebaseFirestore get _firestore => _ref.read(firebaseFirestoreProvider);
+  final FirebaseFirestore _firestore;
+  final String _clubId;
+  final String _displayId;
 
-  DocumentReference _chronoSettingsRef(String clubId, String displayId) {
+  DocumentReference get _chronoSettingsRef {
     // Path: /clubs/{clubId}/displays/{displayDeviceId}/settings/chrono
     return _firestore
         .collection('clubs')
-        .doc(clubId)
+        .doc(_clubId)
         .collection('displays')
-        .doc(displayId)
+        .doc(_displayId)
         .collection('settings')
         .doc('chrono');
   }
 
   /// Returns a stream of the current chrono settings.
   Stream<Chrono> watchChrono() {
-    final ids = _ref.watch(displayDeviceIdsProvider);
-    return _chronoSettingsRef(ids.clubId, ids.displayDeviceId).snapshots().map((
-      snapshot,
-    ) {
+    return _chronoSettingsRef.snapshots().map((snapshot) {
       if (!snapshot.exists || snapshot.data() == null) {
         return const Chrono(); // Default settings if document doesn't exist
       }
@@ -39,11 +40,9 @@ class ChronoRepository {
   /// Writes the authoritative start time from the control app's clock and
   /// requests a server timestamp for synchronization.
   Future<void> start(Chrono currentChrono) async {
-    final ids = _ref.read(displayDeviceIdsProvider);
-
     final eventTime = DateTime.now().millisecondsSinceEpoch;
 
-    await _chronoSettingsRef(ids.clubId, ids.displayDeviceId).set({
+    await _chronoSettingsRef.set({
       'status': ChronoStatus.running.name,
       'authoritativeStartTimeMillis': eventTime,
       'serverWriteTimestamp': FieldValue.serverTimestamp(),
@@ -57,8 +56,6 @@ class ChronoRepository {
   /// Calculates the elapsed time since the last start event and adds it to the
   /// accumulated total.
   Future<void> pause(Chrono currentChrono) async {
-    final ids = _ref.read(displayDeviceIdsProvider);
-
     if (currentChrono.status != ChronoStatus.running) return;
 
     final pauseEventTime = DateTime.now().millisecondsSinceEpoch;
@@ -70,7 +67,7 @@ class ChronoRepository {
         currentChrono.accumulatedElapsedMillis +
         (newlyElapsed > 0 ? newlyElapsed : 0);
 
-    await _chronoSettingsRef(ids.clubId, ids.displayDeviceId).update({
+    await _chronoSettingsRef.update({
       'status': ChronoStatus.paused.name,
       'accumulatedElapsedMillis': totalAccumulated,
     });
@@ -78,8 +75,7 @@ class ChronoRepository {
 
   /// Resets the stopwatch to its initial state.
   Future<void> reset() async {
-    final ids = _ref.read(displayDeviceIdsProvider);
-    await _chronoSettingsRef(ids.clubId, ids.displayDeviceId).set({
+    await _chronoSettingsRef.set({
       'status': ChronoStatus.stopped.name,
       'authoritativeStartTimeMillis': 0,
       'serverWriteTimestamp': null,

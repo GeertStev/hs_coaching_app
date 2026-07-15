@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
 import 'package:hs_coaching_app/features/display/features/chrono/data/chrono_provider.dart';
 import 'package:hs_coaching_app/features/display/features/chrono/domain/chrono.dart';
+import 'package:hs_coaching_app/features/display/features/chrono/presentation/chrono_controller.dart';
 import 'package:hs_coaching_app/features/display/features/chrono/presentation/chrono_screen_controller.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
 
@@ -14,12 +15,21 @@ class ChronoControlScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final chronoAsync = ref.watch(chronoProvider);
 
+    // Luister naar de controller voor eventuele fouten tijdens Firebase mutaties
+    ref.listen<AsyncValue<void>>(chronoControllerProvider, (_, state) {
+      if (state.hasError && !state.isLoading) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fout bij het updaten van de Chrono: ${state.error}'),
+          ),
+        );
+      }
+    });
+
     return ContentControlScreen(
       contentType: DisplayContentType.chrono,
       contentList: Center(
         child: chronoAsync.when(
-          // We pass the chrono data to the view, but the view will use a
-          // dedicated controller for its UI logic.
           data: (chrono) => _ChronoView(chrono: chrono),
           loading: () => const CircularProgressIndicator(),
           error: (err, stack) => Text('Error loading Chrono: $err'),
@@ -45,11 +55,13 @@ class _ChronoView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the screen controller for live UI updates.
+    // Watch the screen controller for live UI updates (timer tick).
     final elapsed = ref.watch(chronoScreenControllerProvider);
-    final chronoRepo = ref.read(chronoRepositoryProvider);
-    final status = chrono.status;
 
+    // De mutatie-controller om acties uit te voeren
+    final controller = ref.read(chronoControllerProvider.notifier);
+
+    final status = chrono.status;
     final bool canReset =
         status == ChronoStatus.paused ||
         (status == ChronoStatus.stopped && chrono.accumulatedElapsedMillis > 0);
@@ -70,7 +82,7 @@ class _ChronoView extends ConsumerWidget {
           children: [
             // Reset Button
             ElevatedButton(
-              onPressed: canReset ? chronoRepo.reset : null,
+              onPressed: canReset ? () => controller.reset() : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey,
                 foregroundColor: Colors.white,
@@ -82,7 +94,7 @@ class _ChronoView extends ConsumerWidget {
             // Start/Pause/Resume Button
             if (status == ChronoStatus.running)
               ElevatedButton(
-                onPressed: () => chronoRepo.pause(chrono),
+                onPressed: () => controller.pause(chrono),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
                   foregroundColor: Colors.white,
@@ -95,7 +107,7 @@ class _ChronoView extends ConsumerWidget {
               )
             else
               ElevatedButton(
-                onPressed: () => chronoRepo.start(chrono),
+                onPressed: () => controller.start(chrono),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,

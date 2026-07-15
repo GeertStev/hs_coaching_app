@@ -9,7 +9,12 @@ import 'package:hs_coaching_app/features/display/features/sketch/presentation/to
 
 class EraserTool implements Tool {
   void _eraseAtPoint(Offset localPoint, SketchCanvasState state) {
-    final elements = state.ref.read(sketchElementsStreamProvider).value ?? [];
+    //final elements = state.ref.read(sketchElementsStreamProvider).value ?? [];
+    final elements =
+        state.ref
+            .read(sketchElementsStreamProvider(state.widget.sketchId))
+            .value ??
+        [];
     for (final element in elements) {
       if (SketchPainter.elementHitTest(
         element,

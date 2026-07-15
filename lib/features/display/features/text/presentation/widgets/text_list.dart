@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/features/text/data/display_text_providers.dart';
-import 'package:hs_coaching_app/features/display/features/text/data/display_text_repository.dart';
 import 'package:hs_coaching_app/features/display/features/text/domain/display_text.dart';
+import 'package:hs_coaching_app/features/display/features/text/presentation/display_text_controller.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog_parts.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_item_card.dart';
@@ -10,16 +10,31 @@ import 'package:hs_coaching_app/features/display/presentation/content_edit_sheet
 import 'package:hs_coaching_app/features/display/presentation/content_list.dart';
 import 'package:hs_coaching_app/features/display/presentation/item_tile.dart';
 
-class TextList extends ConsumerWidget {
+class TextList extends ConsumerStatefulWidget {
   const TextList({super.key});
 
-  Future<void> _showEditTextSheet(
-    BuildContext context,
-    WidgetRef ref,
-    DisplayText textItem,
-  ) async {
+  @override
+  ConsumerState<TextList> createState() => _TextListState();
+}
+
+class _TextListState extends ConsumerState<TextList> {
+  late final TextEditingController _textController;
+
+  @override
+  void initState() {
+    super.initState();
+    _textController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _showEditTextSheet(DisplayText textItem) async {
     final allTags = ref.read(allTextTagsProvider).value ?? [];
-    final textController = TextEditingController(text: textItem.text);
+    _textController.text = textItem.text;
 
     final result = await showModalBottomSheet<ContentEditDialogResult>(
       context: context,
@@ -31,27 +46,34 @@ class TextList extends ConsumerWidget {
         allTags: allTags,
         isNewItem: false,
         showSecondaryAction: false,
-        contentSpecificWidget: TextContentEditor(controller: textController),
+        contentSpecificWidget: TextContentEditor(controller: _textController),
       ),
     );
 
-    if (result == null || result.action == DialogAction.cancel) return;
+    if (result == null || result.action == DialogAction.cancel) {
+      _textController.clear();
+      return;
+    }
 
     if (result.action == DialogAction.save) {
-      final repo = ref.read(displayTextRepositoryProvider);
       final isCurrent = ref.read(currentTextIdProvider).value == textItem.id;
-      await repo.updateTextByDuplicating(
-        originalTextId: textItem.id,
-        isCurrent: isCurrent,
-        newTitle: result.title,
-        newText: textController.text.trim(),
-        newTags: result.tags,
-      );
+
+      // Call de nieuwe controller
+      await ref
+          .read(textControllerProvider.notifier)
+          .updateText(
+            originalTextId: textItem.id,
+            isCurrent: isCurrent,
+            result: result,
+            newTextContent: _textController.text.trim(),
+          );
     }
+
+    _textController.clear();
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return ContentList<DisplayText>(
       itemsProvider: allActiveTextsProvider.call,
       searchQueryProvider: searchQueryProvider,
@@ -71,27 +93,21 @@ class TextList extends ConsumerWidget {
       itemBuilder: (context, textItem) {
         final currentTextId = ref.watch(currentTextIdProvider).value;
         final isCurrent = currentTextId == textItem.id;
+        final controller = ref.read(textControllerProvider.notifier);
+
         return ContentItemCard(
           id: textItem.id,
           title: textItem.title ?? 'Untitled Text',
           isCurrent: isCurrent,
-          onDismissed: () {
-            ref.read(displayTextRepositoryProvider).archiveText(textItem.id);
-          },
-          onUndo: () {
-            ref.read(displayTextRepositoryProvider).unarchiveText(textItem.id);
-          },
-          onTap: () {
-            ref
-                .read(displayTextRepositoryProvider)
-                .setCurrentTextId(isCurrent ? null : textItem.id);
-          },
+          // Korte en cleane aanroepen naar de controller
+          onDismissed: () => controller.archiveText(textItem.id),
+          onUndo: () => controller.unarchiveText(textItem.id),
+          onTap: () => controller.toggleCurrent(textItem.id, isCurrent),
           child: ItemTile(
             title: textItem.title,
             subtitle: textItem.text,
             dateModified: textItem.timestamp,
-            onPrimaryIconPressed: () =>
-                _showEditTextSheet(context, ref, textItem),
+            onPrimaryIconPressed: () => _showEditTextSheet(textItem),
           ),
         );
       },

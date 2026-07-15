@@ -79,6 +79,12 @@ class _TagInputState extends ConsumerState<TagInput> {
     _selectedTags = List.from(widget.initialTags);
   }
 
+  @override
+  void dispose() {
+    _tagInputController.dispose();
+    super.dispose();
+  }
+
   void _addTag(String tag) {
     final newTag = tag.trim();
     if (newTag.isNotEmpty && !_selectedTags.contains(newTag)) {

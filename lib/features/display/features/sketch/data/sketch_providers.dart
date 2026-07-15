@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_app/features/display/application/search_service.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_background.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch.dart';
@@ -9,10 +10,20 @@ import 'package:hs_coaching_app/features/display/features/sketch/domain/command.
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_repository.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
 
-final sketchRepositoryProvider = Provider<SketchRepository>(
-  (ref) => SketchRepository(ref),
-);
+final sketchRepositoryProvider = Provider<SketchRepository>((ref) {
+  final firestore = ref.watch(firebaseFirestoreProvider);
+  final storage = ref.watch(firebaseStorageProvider);
+  final ids = ref.watch(displayDeviceIdsProvider);
 
+  return SketchRepository(
+    firestore: firestore,
+    storage: storage,
+    clubId: ids.clubId,
+    displayId: ids.displayDeviceId,
+  );
+});
+
+/*
 /// This provider will hold the ID of the currently active sketch.
 /// It will be overridden in the widget tree when a sketch is selected.
 class CurrentSketchIdNotifier extends Notifier<String?> {
@@ -26,6 +37,7 @@ final currentSketchIdProvider =
     NotifierProvider<CurrentSketchIdNotifier, String?>(
       CurrentSketchIdNotifier.new,
     );
+*/
 
 final currentSketchIdDocProvider = StreamProvider<String?>((ref) {
   return ref.watch(sketchRepositoryProvider).watchCurrentSketchIdDoc().map((
@@ -55,7 +67,7 @@ final sketchBackgroundsProvider = StreamProvider<List<SketchBackground>>((ref) {
   return ref.watch(sketchRepositoryProvider).watchSketchBackgrounds();
 });
 
-final sketchElementsStreamProvider = StreamProvider<List<SketchElement>>((ref) {
+/*final sketchElementsStreamProvider = StreamProvider<List<SketchElement>>((ref) {
   // We watch these providers to ensure that if the club, display, or sketch
   // ID changes, this stream provider will be re-evaluated, fetching the
   // elements for the new context.
@@ -66,7 +78,14 @@ final sketchElementsStreamProvider = StreamProvider<List<SketchElement>>((ref) {
     return Stream.value([]);
   }
   return ref.read(sketchRepositoryProvider).getSketchElements(sketchId);
-});
+});*/
+
+final sketchElementsStreamProvider =
+    StreamProvider.family<List<SketchElement>, String>((ref, sketchId) {
+      ref.watch(displayDeviceIdsProvider);
+      // ref.watch(currentSketchIdProvider); // <-- VERWIJDERD
+      return ref.read(sketchRepositoryProvider).getSketchElements(sketchId);
+    });
 
 ///
 /// UI STATE PROVIDERS
@@ -127,7 +146,7 @@ class CommandHistoryState {
   final bool canRedo;
 }
 
-class CommandHistoryNotifier extends Notifier<CommandHistoryState> {
+/*class CommandHistoryNotifier extends Notifier<CommandHistoryState> {
   final List<Command> _undoStack = [];
   final List<Command> _redoStack = [];
 
@@ -157,6 +176,44 @@ class CommandHistoryNotifier extends Notifier<CommandHistoryState> {
     final command = _redoStack.removeLast();
     final repo = ref.read(sketchRepositoryProvider);
     await command.execute(repo);
+    _undoStack.add(command);
+    _updateState();
+  }
+
+  void _updateState() {
+    state = CommandHistoryState(
+      canUndo: _undoStack.isNotEmpty,
+      canRedo: _redoStack.isNotEmpty,
+    );
+  }
+}*/
+
+class CommandHistoryNotifier extends Notifier<CommandHistoryState> {
+  final List<Command> _undoStack = [];
+  final List<Command> _redoStack = [];
+
+  @override
+  CommandHistoryState build() => const CommandHistoryState();
+
+  Future<void> execute(Command command, String sketchId) async {
+    await command.execute(ref.read(sketchRepositoryProvider), sketchId);
+    _undoStack.add(command);
+    _redoStack.clear();
+    _updateState();
+  }
+
+  Future<void> undo(String sketchId) async {
+    if (_undoStack.isEmpty) return;
+    final command = _undoStack.removeLast();
+    await command.undo(ref.read(sketchRepositoryProvider), sketchId);
+    _redoStack.add(command);
+    _updateState();
+  }
+
+  Future<void> redo(String sketchId) async {
+    if (_redoStack.isEmpty) return;
+    final command = _redoStack.removeLast();
+    await command.execute(ref.read(sketchRepositoryProvider), sketchId);
     _undoStack.add(command);
     _updateState();
   }

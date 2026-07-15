@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/features/display/data/display_global_settings_provider.dart';
+import 'package:hs_coaching_app/features/display/data/display_global_settings_repository.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_providers.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/command.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
@@ -19,10 +19,12 @@ import 'package:uuid/uuid.dart';
 class SketchCanvas extends ConsumerStatefulWidget {
   const SketchCanvas({
     super.key,
+    required this.sketchId,
     required this.targetSize,
     required this.actualSize,
     this.backgroundUrl,
   });
+  final String sketchId;
   final Size targetSize;
   final Size actualSize;
   final String? backgroundUrl;
@@ -140,7 +142,10 @@ class _SketchCanvasState extends ConsumerState<SketchCanvas>
 
   @override
   Future<void> addCommand(Command command) async {
-    await ref.read(commandHistoryProvider.notifier).execute(command);
+    // Geef de ID door aan de geschiedenis
+    await ref
+        .read(commandHistoryProvider.notifier)
+        .execute(command, widget.sketchId);
   }
 
   Tool get _activeTool {
@@ -151,7 +156,9 @@ class _SketchCanvasState extends ConsumerState<SketchCanvas>
 
   @override
   Widget build(BuildContext context) {
-    final elementsAsync = ref.watch(sketchElementsStreamProvider);
+    final elementsAsync = ref.watch(
+      sketchElementsStreamProvider(widget.sketchId),
+    );
     final selectedElementId = ref.watch(selectedElementIdProvider);
     final settings = ref.read(globalSettingsProvider).value;
 

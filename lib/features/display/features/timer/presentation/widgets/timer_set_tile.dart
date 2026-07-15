@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/features/timer/data/timer_providers.dart';
 import 'package:hs_coaching_app/features/display/features/timer/domain/timer_set.dart';
+import 'package:hs_coaching_app/features/display/features/timer/presentation/timer_controller.dart';
 import 'package:hs_coaching_app/features/display/features/timer/presentation/widgets/timer_set_content_editor.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_item_card.dart';
@@ -59,10 +60,9 @@ class TimerSetTile extends ConsumerWidget {
     );
 
     if (result == null || result.action == DialogAction.cancel) {
-      return; // User cancelled
+      return;
     }
 
-    // If the user hit "Save", update the timer set
     if (result.action == DialogAction.save) {
       final updatedSet = timerSet.copyWith(
         title: result.title,
@@ -70,10 +70,9 @@ class TimerSetTile extends ConsumerWidget {
         restBetweenExercisesSeconds: restBetween,
         exercises: exercises,
         tags: result.tags,
-        updatedAt: DateTime.now(),
       );
 
-      await ref.read(timerRepositoryProvider).updateTimerSet(updatedSet);
+      ref.read(timerControllerProvider.notifier).updateTimerSet(updatedSet);
     }
   }
 
@@ -82,6 +81,8 @@ class TimerSetTile extends ConsumerWidget {
     final totalDuration = _calculateTotalDuration(timerSet);
     final subtitle =
         '${timerSet.exercises.length} exercises - ${_formatDuration(totalDuration)}';
+
+    final controller = ref.read(timerControllerProvider.notifier);
 
     return ContentItemCard(
       id: timerSet.id!,
@@ -93,9 +94,8 @@ class TimerSetTile extends ConsumerWidget {
           context,
         ).showSnackBar(SnackBar(content: Text('Tapped on ${timerSet.title}')));
       },
-      onDismissed: () =>
-          ref.read(timerRepositoryProvider).deleteTimerSet(timerSet.id!),
-      onUndo: () => ref.read(timerRepositoryProvider).addTimerSet(timerSet),
+      onDismissed: () => controller.deleteTimerSet(timerSet.id!),
+      onUndo: () => controller.restoreTimerSet(timerSet),
       child: ItemTile(
         title: timerSet.title,
         subtitle: subtitle,

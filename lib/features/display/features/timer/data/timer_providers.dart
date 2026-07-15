@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_app/features/display/application/search_service.dart';
+import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
 import 'package:hs_coaching_app/features/display/features/timer/data/timer_repository.dart';
 import 'package:hs_coaching_app/features/display/features/timer/domain/timer_exercise.dart';
 import 'package:hs_coaching_app/features/display/features/timer/domain/timer_set.dart';
@@ -8,7 +10,14 @@ import 'package:hs_coaching_app/features/display/features/timer/domain/timer_sta
 
 /// Provider for the timer repository.
 final timerRepositoryProvider = Provider<TimerRepository>((ref) {
-  return TimerRepository(ref);
+  final firestore = ref.watch(firebaseFirestoreProvider);
+  final ids = ref.watch(displayDeviceIdsProvider);
+
+  return TimerRepository(
+    firestore: firestore,
+    clubId: ids.clubId,
+    displayId: ids.displayDeviceId,
+  );
 });
 
 /// A provider that streams the list of all available TimerExercises.

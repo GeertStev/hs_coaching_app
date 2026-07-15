@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/features/display/data/display_content_settings_provider.dart';
+import 'package:hs_coaching_app/features/display/data/display_content_settings_repository.dart';
 import 'package:hs_coaching_app/features/display/data/display_settings_repository.dart';
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
 

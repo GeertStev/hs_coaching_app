@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/presentation/display_sketch_controller.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog_parts.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_sheet.dart';
@@ -43,23 +44,22 @@ class SketchList extends ConsumerWidget {
 
     if (result == null || result.action != DialogAction.save) return;
 
+    // Call de nieuwe controller
     await ref
-        .read(sketchRepositoryProvider)
+        .read(sketchControllerProvider.notifier)
         .updateSketch(
-          id: sketch.id,
-          title: result.title,
-          description: result.description,
-          tags: result.tags,
+          sketchId: sketch.id,
+          result: result,
           backgroundUrl: selectedBackgroundUrl,
         );
   }
 
-  void _navigateToSketch(BuildContext context, String sketchId) {
+  void _navigateToSketch(BuildContext context, WidgetRef ref, String sketchId) {
+    ref.read(sketchRepositoryProvider).updateSketchTimestamp(sketchId);
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ProviderScope(
           overrides: [
-            // We keep the scope to provide a fresh command history for this sketch.
             commandHistoryProvider.overrideWith(CommandHistoryNotifier.new),
           ],
           child: SketchScreen(sketchId: sketchId),
@@ -89,19 +89,16 @@ class SketchList extends ConsumerWidget {
       itemBuilder: (context, sketch) {
         final currentSketchId = ref.watch(currentSketchIdDocProvider).value;
         final isCurrent = currentSketchId == sketch.id;
+        final controller = ref.read(sketchControllerProvider.notifier);
+
         return ContentItemCard(
           id: sketch.id,
           title: sketch.title,
           isCurrent: isCurrent,
-          onDismissed: () {
-            ref.read(sketchRepositoryProvider).archiveSketch(sketch.id);
-          },
-          onUndo: () {
-            ref.read(sketchRepositoryProvider).unarchiveSketch(sketch.id);
-          },
-          onTap: () => ref
-              .read(sketchRepositoryProvider)
-              .setCurrentSketchId(isCurrent ? null : sketch.id),
+          // De cleane controller calls:
+          onDismissed: () => controller.archiveSketch(sketch.id),
+          onUndo: () => controller.unarchiveSketch(sketch.id),
+          onTap: () => controller.toggleCurrent(sketch.id, isCurrent),
           child: ItemTile(
             title: sketch.title,
             subtitle: sketch.description,
@@ -110,7 +107,8 @@ class SketchList extends ConsumerWidget {
                 _showEditSketchDialog(context, ref, sketch),
             secondaryIcon: Icons.draw_outlined,
             secondaryIconTooltip: 'Open Sketch',
-            onSecondaryIconPressed: () => _navigateToSketch(context, sketch.id),
+            onSecondaryIconPressed: () =>
+                _navigateToSketch(context, ref, sketch.id),
           ),
         );
       },

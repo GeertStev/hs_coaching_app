@@ -3,61 +3,46 @@ import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_e
 
 /// The Command Interface that all command classes will implement.
 abstract class Command {
-  /// Executes the command's action.
-  Future<void> execute(SketchRepository repo);
-
-  /// Reverts the command's action.
-  Future<void> undo(SketchRepository repo);
+  Future<void> execute(SketchRepository repo, String sketchId);
+  Future<void> undo(SketchRepository repo, String sketchId);
 }
 
-/// A command for adding a new element to the canvas.
 class AddElementCommand implements Command {
   AddElementCommand(this._element);
-
   final SketchElement _element;
 
   @override
-  Future<void> execute(SketchRepository repo) async {
-    await repo.addOrUpdateElement(_element);
-  }
+  Future<void> execute(SketchRepository repo, String sketchId) async =>
+      await repo.addOrUpdateElement(sketchId, _element);
 
   @override
-  Future<void> undo(SketchRepository repo) async {
-    await repo.removeElement(_element.id);
-  }
+  Future<void> undo(SketchRepository repo, String sketchId) async =>
+      await repo.removeElement(sketchId, _element.id);
 }
 
-/// A command for removing an element from the canvas.
 class RemoveElementCommand implements Command {
   RemoveElementCommand(this._element);
-
   final SketchElement _element;
 
   @override
-  Future<void> execute(SketchRepository repo) async {
-    await repo.removeElement(_element.id);
-  }
+  Future<void> execute(SketchRepository repo, String sketchId) async =>
+      await repo.removeElement(sketchId, _element.id);
 
   @override
-  Future<void> undo(SketchRepository repo) async {
-    await repo.addOrUpdateElement(_element);
-  }
+  Future<void> undo(SketchRepository repo, String sketchId) async =>
+      await repo.addOrUpdateElement(sketchId, _element);
 }
 
-/// A command for updating an existing element (e.g., moving, rotating).
 class UpdateElementCommand implements Command {
   UpdateElementCommand(this.oldElement, this.newElement);
-
   final SketchElement oldElement;
   final SketchElement newElement;
 
   @override
-  Future<void> execute(SketchRepository repo) async {
-    await repo.addOrUpdateElement(newElement);
-  }
+  Future<void> execute(SketchRepository repo, String sketchId) async =>
+      await repo.addOrUpdateElement(sketchId, newElement);
 
   @override
-  Future<void> undo(SketchRepository repo) async {
-    await repo.addOrUpdateElement(oldElement);
-  }
+  Future<void> undo(SketchRepository repo, String sketchId) async =>
+      await repo.addOrUpdateElement(sketchId, oldElement);
 }

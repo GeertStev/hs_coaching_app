@@ -1,16 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
-import 'package:hs_coaching_app/features/display/features/game/data/game_settings_repository.dart';
-import 'package:hs_coaching_app/features/display/features/game/domain/game_settings.dart';
+import 'package:hs_coaching_app/features/display/features/game/data/game_provider.dart';
+import 'package:hs_coaching_app/features/display/features/game/presentation/game_controller.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
-
-/// A provider that streams the latest game settings from Firestore.
-/// ToDo Move?
-final gameSettingsProvider = StreamProvider<GameSettings>((ref) {
-  final repository = ref.watch(gameSettingsRepositoryProvider);
-  return repository.watchGameSettings();
-});
 
 class GameControlScreen extends ConsumerWidget {
   const GameControlScreen({super.key});
@@ -18,25 +11,32 @@ class GameControlScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final gameSettings = ref.watch(gameSettingsProvider);
-    final gameRepo = ref.read(gameSettingsRepositoryProvider);
+
+    // Luister naar de controller voor eventuele fouten tijdens Firebase mutaties
+    ref.listen<AsyncValue<void>>(gameControllerProvider, (_, state) {
+      if (state.hasError && !state.isLoading) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fout bij het updaten van de score: ${state.error}'),
+          ),
+        );
+      }
+    });
 
     return ContentControlScreen(
       contentType: DisplayContentType.game,
-      /*addIcon: Icons.refresh,
-      addTooltip: 'Reset Scores',
-      onAdd: () => gameRepo.resetScores(),*/
       contentList: gameSettings.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
         data: (settings) {
+          final controller = ref.read(gameControllerProvider.notifier);
+
           return Column(
-            //mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               IconButton(
-                onPressed: gameRepo.resetScores,
+                onPressed: () => controller.resetScores(),
                 icon: const Icon(Icons.refresh),
               ),
-              //const SizedBox(height: 16),
               Expanded(
                 child: Row(
                   children: [
@@ -46,27 +46,29 @@ class GameControlScreen extends ConsumerWidget {
                         teamColor: Colors.white,
                         backgroundColor: Colors.black,
                         score: settings.whiteScore,
-                        onIncrement: () => gameRepo.incrementScore(false),
-                        onDecrement: () =>
-                            gameRepo.decrementScore(false, settings.whiteScore),
+                        onIncrement: () => controller.incrementScore(false),
+                        onDecrement: () => controller.decrementScore(
+                          false,
+                          settings.whiteScore,
+                        ),
                       ),
                     ),
-                    //const VerticalDivider(thickness: 1, width: 1),
                     Expanded(
                       child: _TeamControl(
                         teamName: 'Black',
                         teamColor: Colors.black,
                         backgroundColor: Colors.white,
                         score: settings.blackScore,
-                        onIncrement: () => gameRepo.incrementScore(true),
-                        onDecrement: () =>
-                            gameRepo.decrementScore(true, settings.blackScore),
+                        onIncrement: () => controller.incrementScore(true),
+                        onDecrement: () => controller.decrementScore(
+                          true,
+                          settings.blackScore,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              //const SizedBox(height: 16),
             ],
           );
         },

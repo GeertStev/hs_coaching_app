@@ -57,7 +57,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       const DisplayFeaturesScreen(),
     ];
 
-    final titles = ['Home', 'Screens'];
+    final titles = ['Home', 'Screen control'];
     return Scaffold(
       appBar: AppBar(title: Text(titles[_selectedIndex])),
       body: IndexedStack(index: _selectedIndex, children: widgetOptions),

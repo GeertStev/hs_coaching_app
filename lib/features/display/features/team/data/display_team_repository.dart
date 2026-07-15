@@ -8,29 +8,42 @@ import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
 
 final displayTeamRepositoryProvider = Provider<DisplayTeamRepository>((ref) {
-  return DisplayTeamRepository(ref);
+  final firestore = ref.watch(firebaseFirestoreProvider);
+  final ids = ref.watch(displayDeviceIdsProvider);
+
+  return DisplayTeamRepository(
+    firestore: firestore,
+    clubId: ids.clubId,
+    displayId: ids.displayDeviceId,
+  );
 });
 
 class DisplayTeamRepository {
-  DisplayTeamRepository(this._ref);
+  DisplayTeamRepository({
+    required FirebaseFirestore firestore,
+    required String clubId,
+    required String displayId,
+  }) : _firestore = firestore,
+       _clubId = clubId,
+       _displayId = displayId;
 
-  final Ref _ref;
-  FirebaseFirestore get _firestore => _ref.read(firebaseFirestoreProvider);
+  final FirebaseFirestore _firestore;
+  final String _clubId;
+  final String _displayId;
 
-  DocumentReference _teamSettingsRef(String clubId, String displayId) {
+  DocumentReference get _teamSettingsRef {
     // Path: /clubs/{clubId}/displays/{displayDeviceId}/teams/current
     return _firestore
         .collection('clubs')
-        .doc(clubId)
+        .doc(_clubId)
         .collection('displays')
-        .doc(displayId)
+        .doc(_displayId)
         .collection('settings')
         .doc('team');
   }
 
   Future<void> triggerTeamUpdate() async {
-    final ids = _ref.read(displayDeviceIdsProvider);
-    await _teamSettingsRef(ids.clubId, ids.displayDeviceId).set({
+    await _teamSettingsRef.set({
       'update': true,
       'timestamp': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));

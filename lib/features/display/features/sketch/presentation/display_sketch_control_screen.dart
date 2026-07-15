@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/presentation/display_sketch_controller.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog_parts.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_sheet.dart';
@@ -41,31 +42,34 @@ class _SketchControlScreenState extends ConsumerState<SketchControlScreen> {
 
     if (result == null || result.action == DialogAction.cancel) return;
 
-    final repo = ref.read(sketchRepositoryProvider);
-    final newSketchId = await repo.createSketch(
-      title: result.title,
-      description: result.description,
-      tags: result.tags,
-      backgroundUrl: selectedBackgroundUrl,
-    );
+    final isDisplayAction = result.action == DialogAction.display;
 
-    if (result.action == DialogAction.display) {
-      await repo.setCurrentSketchId(newSketchId);
-    }
+    // Call de nieuwe controller
+    final newSketchId = await ref
+        .read(sketchControllerProvider.notifier)
+        .createSketch(
+          result: result,
+          backgroundUrl: selectedBackgroundUrl,
+          setAsCurrent: isDisplayAction,
+        );
 
-    // Navigate to the new sketch screen if the user chose 'Display'
-    if (result.action == DialogAction.display && context.mounted) {
-      _navigateToSketch(context, newSketchId);
+    // Controleer of de widget nog in de tree zit na de async acties
+    if (!mounted) return;
+
+    // Navigeer enkel als de sketch correct is aangemaakt en de actie 'display' was
+    if (newSketchId != null && isDisplayAction) {
+      _navigateToSketch(newSketchId); // Geen context meer nodig als parameter!
     }
   }
 
-  void _navigateToSketch(BuildContext context, String sketchId) {
+  void _navigateToSketch(String sketchId) {
+    if (!mounted) return;
+
+    ref.read(sketchRepositoryProvider).updateSketchTimestamp(sketchId);
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ProviderScope(
           overrides: [
-            // We no longer override currentSketchIdProvider here.
-            // We keep the scope to provide a fresh command history for this sketch.
             commandHistoryProvider.overrideWith(CommandHistoryNotifier.new),
           ],
           child: SketchScreen(sketchId: sketchId),
@@ -76,6 +80,13 @@ class _SketchControlScreenState extends ConsumerState<SketchControlScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<void>>(sketchControllerProvider, (_, state) {
+      if (state.hasError && !state.isLoading) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(state.error.toString())));
+      }
+    });
     return ContentControlScreen(
       contentList: const SketchList(),
       onAdd: _createNewSketch,

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/features/image/data/display_image_providers.dart';
-import 'package:hs_coaching_app/features/display/features/image/data/display_image_repository.dart';
+import 'package:hs_coaching_app/features/display/features/image/presentation/image_controller.dart';
 import 'package:hs_coaching_app/features/display/features/image/presentation/widgets/image_content_editor.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_sheet.dart';
@@ -16,10 +16,20 @@ class ImageControlScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Future<void> showAddImageSheet() async {
+    // Optioneel: Luister naar errors van de controller om een SnackBar te tonen
+    ref.listen<AsyncValue<void>>(imageControllerProvider, (_, state) {
+      if (state.hasError && !state.isLoading) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(state.error.toString())));
+      }
+    });
+
+    Future<void> handleAddImage() async {
       File? imageFile;
       final allTags = ref.read(allImageTagsProvider).value ?? [];
 
+      // UI Logica: Tonen van de dialoog
       final result = await showModalBottomSheet<ContentEditDialogResult>(
         context: context,
         isScrollControlled: true,
@@ -34,20 +44,21 @@ class ImageControlScreen extends ConsumerWidget {
         ),
       );
 
+      // Early return bij annuleren
       if (result == null ||
           result.action == DialogAction.cancel ||
           imageFile == null) {
         return;
       }
 
+      // Business Logica delegatie
       final setAsCurrent = result.action == DialogAction.display;
 
+      // Roep de controller aan, let op de .notifier
       await ref
-          .read(displayImageRepositoryProvider)
+          .read(imageControllerProvider.notifier)
           .addImage(
-            title: result.title,
-            description: result.description,
-            tags: result.tags,
+            result: result,
             imageFile: imageFile!,
             setAsCurrent: setAsCurrent,
           );
@@ -55,7 +66,7 @@ class ImageControlScreen extends ConsumerWidget {
 
     return ContentControlScreen(
       contentList: const ImageList(),
-      onAdd: showAddImageSheet,
+      onAdd: handleAddImage,
       addIcon: Icons.add_a_photo_outlined,
       addTooltip: 'Add Image',
       contentType: DisplayContentType.image,

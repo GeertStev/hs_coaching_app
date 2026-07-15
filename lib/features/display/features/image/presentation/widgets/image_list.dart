@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/features/image/data/display_image_providers.dart';
-import 'package:hs_coaching_app/features/display/features/image/data/display_image_repository.dart';
 import 'package:hs_coaching_app/features/display/features/image/domain/display_image.dart';
+import 'package:hs_coaching_app/features/display/features/image/presentation/image_controller.dart';
 import 'package:hs_coaching_app/features/display/features/image/presentation/widgets/image_content_editor.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_sheet.dart';
@@ -41,13 +41,8 @@ class ImageList extends ConsumerWidget {
 
     if (result.action == DialogAction.save) {
       await ref
-          .read(displayImageRepositoryProvider)
-          .updateImage(
-            id: imageItem.id,
-            title: result.title,
-            description: result.description,
-            tags: result.tags,
-          );
+          .read(imageControllerProvider.notifier)
+          .updateImage(imageId: imageItem.id, result: result);
     }
   }
 
@@ -72,24 +67,15 @@ class ImageList extends ConsumerWidget {
       itemBuilder: (context, imageItem) {
         final currentImageId = ref.watch(currentImageIdProvider).value;
         final isCurrent = currentImageId == imageItem.id;
+        final controller = ref.read(imageControllerProvider.notifier);
+
         return ContentItemCard(
           id: imageItem.id,
           title: imageItem.title ?? 'Untitled Image',
           isCurrent: isCurrent,
-          onDismissed: () {
-            ref.read(displayImageRepositoryProvider).archiveImage(imageItem.id);
-          },
-          onUndo: () {
-            ref
-                .read(displayImageRepositoryProvider)
-                .unarchiveImage(imageItem.id);
-          },
-          onTap: () {
-            final repo = ref.read(displayImageRepositoryProvider);
-            isCurrent
-                ? repo.clearCurrentImage()
-                : repo.setCurrentImageId(imageItem.id);
-          },
+          onDismissed: () => controller.archiveImage(imageItem.id),
+          onUndo: () => controller.unarchiveImage(imageItem.id),
+          onTap: () => controller.toggleCurrent(imageItem.id, isCurrent),
           child: ItemTile(
             title: imageItem.title ?? '',
             imageUrl: imageItem.url,

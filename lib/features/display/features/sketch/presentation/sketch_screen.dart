@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
-import 'package:hs_coaching_app/features/display/data/display_global_settings_provider.dart';
+//import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
+import 'package:hs_coaching_app/features/display/data/display_global_settings_repository.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_providers.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_canvas.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/toolbar.dart';
@@ -17,7 +17,7 @@ class SketchScreen extends ConsumerStatefulWidget {
 
 class _SketchScreenState extends ConsumerState<SketchScreen> {
   @override
-  void initState() {
+  /*void initState() {
     super.initState();
     // Set the current sketch ID when the screen is initialized.
     // We use a post-frame callback to ensure the provider is ready.
@@ -29,8 +29,7 @@ class _SketchScreenState extends ConsumerState<SketchScreen> {
           .read(sketchRepositoryProvider)
           .updateSketchTimestamp(widget.sketchId, ids);
     });
-  }
-
+  }*/
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(globalSettingsProvider);
@@ -40,7 +39,10 @@ class _SketchScreenState extends ConsumerState<SketchScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const Padding(padding: EdgeInsets.all(8.0), child: Toolbar()),
+            Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Toolbar(sketchId: widget.sketchId),
+            ),
             Expanded(
               child: Center(
                 child: settings.when(
@@ -59,6 +61,7 @@ class _SketchScreenState extends ConsumerState<SketchScreen> {
                           );
                           return sketchAsync.when(
                             data: (sketch) => SketchCanvas(
+                              sketchId: widget.sketchId,
                               targetSize: targetSize,
                               actualSize: actualSize,
                               backgroundUrl: sketch.backgroundUrl,

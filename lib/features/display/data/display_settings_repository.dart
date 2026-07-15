@@ -4,37 +4,43 @@ import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
 
-/// Provider for the screen settings repository.
 final displaySettingsRepositoryProvider = Provider<DisplaySettingsRepository>((
   ref,
 ) {
-  return DisplaySettingsRepository(ref);
+  final firestore = ref.watch(firebaseFirestoreProvider);
+  final ids = ref.watch(displayDeviceIdsProvider);
+
+  return DisplaySettingsRepository(
+    firestore: firestore,
+    clubId: ids.clubId,
+    displayId: ids.displayDeviceId,
+  );
 });
 
-/// A repository for managing screen-related settings in Firestore.
 class DisplaySettingsRepository {
-  DisplaySettingsRepository(this._ref);
+  DisplaySettingsRepository({
+    required FirebaseFirestore firestore,
+    required String clubId,
+    required String displayId,
+  }) : _firestore = firestore,
+       _clubId = clubId,
+       _displayId = displayId;
 
-  final Ref _ref;
-  FirebaseFirestore get _firestore => _ref.read(firebaseFirestoreProvider);
+  final FirebaseFirestore _firestore;
+  final String _clubId;
+  final String _displayId;
 
-  DocumentReference _contentSettingsRef(String clubId, String displayId) {
-    // Path: /clubs/{clubId}/displays/{displayDeviceId}/settings/content
+  DocumentReference _contentSettingsRef() {
     return _firestore
         .collection('clubs')
-        .doc(clubId)
+        .doc(_clubId)
         .collection('displays')
-        .doc(displayId)
+        .doc(_displayId)
         .collection('settings')
         .doc('content');
   }
 
-  /// Updates the contentType field in the content settings document.
   Future<void> updateContentType(DisplayContentType contentType) async {
-    final ids = _ref.read(displayDeviceIdsProvider);
-    await _contentSettingsRef(
-      ids.clubId,
-      ids.displayDeviceId,
-    ).set({'contentType': contentType.name});
+    await _contentSettingsRef().set({'contentType': contentType.name});
   }
 }

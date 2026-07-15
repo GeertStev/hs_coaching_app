@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/features/display/data/display_global_settings_provider.dart';
+import 'package:hs_coaching_app/features/display/data/display_global_settings_repository.dart';
 
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
@@ -58,7 +58,9 @@ class _ImageContentEditorState extends ConsumerState<ImageContentEditor> {
       ],
     );
     if (croppedFile != null) {
-      setState(() => _imageFile = File(croppedFile.path));
+      final file = File(croppedFile.path);
+      setState(() => _imageFile = file);
+      widget.onImageChanged?.call(file);
     }
   }
 
