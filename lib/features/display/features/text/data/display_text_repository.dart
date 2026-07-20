@@ -44,8 +44,8 @@ class DisplayTextRepository {
         .collection('texts')
         .withConverter<DisplayText>(
           fromFirestore: (snapshot, _) =>
-              DisplayText.fromMap(snapshot.data()!).copyWith(id: snapshot.id),
-          toFirestore: (text, _) => text.toMap(),
+              DisplayText.fromJson(snapshot.data()!).copyWith(id: snapshot.id),
+          toFirestore: (text, _) => text.toJson(),
         );
   }
 

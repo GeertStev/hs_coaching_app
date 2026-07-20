@@ -5,7 +5,7 @@ import 'package:hs_coaching_app/features/display/features/sketch/domain/offset_c
 part 'sketch_element.freezed.dart';
 part 'sketch_element.g.dart';
 
-enum SketchElementType { path, arrow, line, rectangle, circle, icon }
+enum SketchElementType { path, arrow, line, rectangle, polygon, circle, icon }
 
 /// A map to hold available icons. This can be expanded easily.
 const Map<String, IconData> availableIcons = {
@@ -54,6 +54,16 @@ sealed class SketchElement with _$SketchElement {
     @OffsetConverter() required Offset end,
     @ColorConverter() Color? fillColor,
   }) = RectangleElement;
+
+  @JsonSerializable(explicitToJson: true)
+  const factory SketchElement.polygon({
+    required String id,
+    @Default(SketchElementType.polygon) SketchElementType type,
+    @ColorConverter() required Color color,
+    required int strokeWidth,
+    required List<Point> points, // De hoekpunten van de veelhoek
+    @ColorConverter() Color? fillColor,
+  }) = PolygonElement;
 
   const factory SketchElement.circle({
     required String id,

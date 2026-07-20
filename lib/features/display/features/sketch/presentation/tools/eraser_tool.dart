@@ -1,46 +1,65 @@
 import 'package:flutter/material.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_providers.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/command.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_canvas.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_painter.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/tool.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/stateless_tool.dart';
 
-// When erasing an icon, there is not always an update, the icon is only removed when redrawing
-
-class EraserTool implements Tool {
-  void _eraseAtPoint(Offset localPoint, SketchCanvasState state) {
-    //final elements = state.ref.read(sketchElementsStreamProvider).value ?? [];
-    final elements =
-        state.ref
-            .read(sketchElementsStreamProvider(state.widget.sketchId))
-            .value ??
-        [];
-    for (final element in elements) {
+class EraserTool implements StatelessTool {
+  Command? _eraseAtPoint(Offset localPoint, ToolConfig config) {
+    // 1. Gum het bovenste icoontje weg als er een klik op is
+    final icons = config.elements.whereType<IconElement>().toList();
+    for (final el in icons.reversed) {
       if (SketchPainter.elementHitTest(
-        element,
+        el,
         localPoint,
-        state.widget.actualSize,
-        state.widget.targetSize,
+        config.actualSize,
+        config.targetSize,
       )) {
-        state.addCommand(RemoveElementCommand(element));
-        break; // Remove one at a time
+        return RemoveElementCommand(el);
       }
     }
+
+    // 2. Gum daarna pas achterliggende vormen weg (van nieuw/boven naar oud/onder)
+    final nonIcons = config.elements.where((e) => e is! IconElement).toList();
+    for (final el in nonIcons.reversed) {
+      if (SketchPainter.elementHitTest(
+        el,
+        localPoint,
+        config.actualSize,
+        config.targetSize,
+      )) {
+        return RemoveElementCommand(el);
+      }
+    }
+    return null;
   }
 
   @override
-  void onPanStart(DragStartDetails details, SketchCanvasState state) {
-    _eraseAtPoint(details.localPosition, state);
+  ToolResult onPanStart(
+    Offset localPos,
+    DrawingSessionState state,
+    ToolConfig config,
+  ) {
+    return ToolResult(state: state, command: _eraseAtPoint(localPos, config));
   }
 
   @override
-  void onPanUpdate(DragUpdateDetails details, SketchCanvasState state) {
-    _eraseAtPoint(details.localPosition, state);
+  ToolResult onPanUpdate(
+    Offset localPos,
+    DrawingSessionState state,
+    ToolConfig config,
+  ) {
+    return ToolResult(state: state, command: _eraseAtPoint(localPos, config));
   }
 
   @override
-  void onPanEnd(DragEndDetails details, SketchCanvasState state) {}
+  ToolResult onPanEnd(DrawingSessionState state, ToolConfig config) =>
+      ToolResult(state: state);
 
   @override
-  void onTapUp(TapUpDetails details, SketchCanvasState state) {}
+  ToolResult onTapUp(
+    Offset localPos,
+    DrawingSessionState state,
+    ToolConfig config,
+  ) => ToolResult(state: state);
 }

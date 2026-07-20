@@ -1,18 +1,14 @@
-/// Represents a single player.
-class Player {
-  Player({required this.name});
-  final String name;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  /// Creates a Player from a structured JSON map.
-  factory Player.fromJson(Map<String, dynamic> data) {
-    final name = data['name'];
-    if (name is! String || name.isEmpty) {
-      throw FormatException(
-        'Invalid JSON: "name" is required and must be a non-empty String in $data',
-      );
-    }
-    return Player(name: name);
-  }
+part 'player_model.freezed.dart';
+part 'player_model.g.dart';
+
+/// Represents a single player.
+@freezed
+abstract class Player with _$Player {
+  const factory Player({required String name}) = _Player;
+
+  factory Player.fromJson(Map<String, dynamic> json) => _$PlayerFromJson(json);
 
   /// Creates a Player from a simple string.
   /// ToDo: This is for compatibility with the current Google Script data source.

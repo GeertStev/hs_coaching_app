@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/auth/data/auth_providers.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_providers.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_data_providers.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
 
 class SketchController extends AsyncNotifier<void> {
@@ -85,6 +85,15 @@ class SketchController extends AsyncNotifier<void> {
     state = await AsyncValue.guard(
       () => ref.read(sketchRepositoryProvider).unarchiveSketch(sketchId),
     );
+  }
+
+  Future<void> updateBackground(String sketchId, String? backgroundUrl) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref
+          .read(sketchRepositoryProvider)
+          .updateSketchBackground(sketchId, backgroundUrl);
+    });
   }
 }
 

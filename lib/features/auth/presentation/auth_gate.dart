@@ -24,3 +24,17 @@ class AuthGate extends ConsumerWidget {
     );
   }
 }
+
+
+/*
+I/FirebaseAuth( 7063): Logging in as blaatschaap@geert.st with empty reCAPTCHA token
+W/System  ( 7063): Ignoring header X-Firebase-Locale because its value was null.
+W/LocalRequestInterceptor( 7063): Error getting App Check token; using placeholder token instead. Error: com.google.firebase.FirebaseException: No AppCheckProvider installed.
+
+E/flutter ( 7063): [ERROR:flutter/runtime/dart_vm_initializer.cc(40)] Unhandled Exception: Cannot use the Ref of AsyncNotifierProvider<AuthController, void>#14933 after it has been disposed. This typically happens if:
+E/flutter ( 7063): - A provider rebuilt, but the previous "build" was still pending and is still performing operations.
+E/flutter ( 7063):   You should therefore either use `ref.onDispose` to cancel pending work, or
+E/flutter ( 7063):   check `ref.mounted` after async gaps or anything that could invalidate the provider.
+E/flutter ( 7063): - You tried to use Ref inside `onDispose` or other life-cycles.
+E/flutter ( 7063):   This is not supported, as the provider is already being disposed.
+*/

@@ -1,47 +1,63 @@
 import 'dart:async';
-
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/features/chrono/data/chrono_provider.dart';
 import 'package:hs_coaching_app/features/display/features/chrono/domain/chrono.dart';
 
-/// Manages the UI state for the ChronoControlScreen, including the timer
-/// for live updates.
 class ChronoScreenController extends Notifier<Duration> {
   Timer? _timer;
+  int? _lastCountdownSecond;
 
   @override
   Duration build() {
-    // Watch the authoritative chrono state from the repository.
-    final chronoAsync = ref.watch(chronoProvider);
-    final chrono = chronoAsync.asData?.value ?? const Chrono();
+    final chronoAsync = ref.watch(chronoNotifierProvider);
+    final chrono = chronoAsync.value ?? const Chrono();
 
-    // When the notifier is disposed (e.g., user navigates away), cancel the timer.
     ref.onDispose(() {
       _timer?.cancel();
     });
 
-    // Stop any previous timer when the chrono state changes.
     _timer?.cancel();
 
-    // If the chrono is running, start a timer to update the UI periodically.
     if (chrono.status == ChronoStatus.running) {
-      _timer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
-        // We don't need to read the full chrono object again, just recalculate
-        // the elapsed time based on the original start time.
+      _timer = Timer.periodic(const Duration(milliseconds: 30), (_) {
         state = _calculateElapsed(chrono);
       });
     }
 
-    // Return the initial or final calculated duration.
     return _calculateElapsed(chrono);
   }
 
   Duration _calculateElapsed(Chrono chrono) {
     int currentElapsedMillis = 0;
+
     if (chrono.status == ChronoStatus.running) {
       final now = DateTime.now().millisecondsSinceEpoch;
-      currentElapsedMillis = now - chrono.authoritativeStartTimeMillis;
+
+      // FIX: Verwijder de serverWriteTimestamp override.
+      // We gebruiken uitsluitend authoritativeStartTimeMillis omdat
+      // de countdown daar al in is verwerkt.
+      int startMillis = chrono.authoritativeStartTimeMillis;
+
+      currentElapsedMillis = now - startMillis;
+
+      // Als de tijd negatief is, zitten we in een countdown.
+      if (currentElapsedMillis < 0) {
+        final secondsLeft = (currentElapsedMillis.abs() / 1000).ceil();
+
+        // Speel een tik-geluid af als de seconde wijzigt
+        if (_lastCountdownSecond != secondsLeft) {
+          _lastCountdownSecond = secondsLeft;
+          SystemSound.play(SystemSoundType.click);
+        }
+
+        // Return direct de pure (negatieve) countdown
+        return Duration(milliseconds: currentElapsedMillis);
+      } else {
+        _lastCountdownSecond = null;
+      }
     }
+
     return Duration(
       milliseconds: chrono.accumulatedElapsedMillis + currentElapsedMillis,
     );

@@ -1,27 +1,15 @@
-import 'package:flutter/foundation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-@immutable
-class SketchBackground {
-  final String title;
-  final String url;
+part 'sketch_background.freezed.dart';
+part 'sketch_background.g.dart';
 
-  const SketchBackground({required this.title, required this.url});
+@freezed
+abstract class SketchBackground with _$SketchBackground {
+  const factory SketchBackground({
+    @Default('Untitled') String title,
+    @Default('') String url,
+  }) = _SketchBackground;
 
-  factory SketchBackground.fromMap(Map<String, dynamic> map) {
-    return SketchBackground(
-      title: map['title'] as String? ?? 'Untitled',
-      url: map['url'] as String? ?? '',
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {'title': title, 'url': url};
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      other is SketchBackground && other.url == url;
-
-  @override
-  int get hashCode => url.hashCode;
+  factory SketchBackground.fromJson(Map<String, dynamic> json) =>
+      _$SketchBackgroundFromJson(json);
 }

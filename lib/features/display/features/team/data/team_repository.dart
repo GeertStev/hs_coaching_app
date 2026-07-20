@@ -31,8 +31,8 @@ class TeamRepository {
       SchedulerBinding.instance.ensureVisualUpdate();
 
       return [
-        Team.fromJson(jsonData, TeamColor.white),
-        Team.fromJson(jsonData, TeamColor.black),
+        Team.fromGoogleScriptResponse(jsonData, TeamColor.white),
+        Team.fromGoogleScriptResponse(jsonData, TeamColor.black),
       ];
     } else {
       throw Exception(

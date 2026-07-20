@@ -1,0 +1,199 @@
+rules_version = '2';
+
+// Security rules voor de HS Coaching app.
+// Deploy met: firebase deploy --only firestore:rules
+//
+// Structuur:
+//   users/{uid}                          eigen profiel
+//   clubs/{clubId}                       club
+//     members/{uid}                      lidmaatschap (rol + status + ploegen)
+//     teams/{teamId}                     ploegen
+//     invites/{code}                     uitnodigingen (beheer, alleen admin)
+//     displays/{displayId}/**            display-content (bestaande feature)
+//   inviteCodes/{code}                   spiegel van invites voor de join-flow:
+//                                        alleen 'get' per code (de code is het
+//                                        geheim), nooit 'list'.
+//
+// Benodigde index: collection-group index op members.uid (single field,
+// collection-group scope) voor de "mijn clubs"-query.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function memberPath(clubId, uid) {
+      return /databases/$(database)/documents/clubs/$(clubId)/members/$(uid);
+    }
+
+    function memberData(clubId) {
+      return get(memberPath(clubId, request.auth.uid)).data;
+    }
+
+    function isActiveMember(clubId) {
+      return signedIn()
+        && exists(memberPath(clubId, request.auth.uid))
+        && memberData(clubId).status == 'active';
+    }
+
+    function isClubAdmin(clubId) {
+      return signedIn()
+        && exists(memberPath(clubId, request.auth.uid))
+        && memberData(clubId).status == 'active'
+        && memberData(clubId).role == 'clubAdmin';
+    }
+
+    function isTrainerOrAdmin(clubId) {
+      return signedIn()
+        && exists(memberPath(clubId, request.auth.uid))
+        && memberData(clubId).status == 'active'
+        && memberData(clubId).role in ['trainer', 'clubAdmin'];
+    }
+
+    // ------------------------------------------------------------- Users
+    // Alleen de gebruiker zelf; rol-escalatie via het eigen document is
+    // niet mogelijk omdat club-rollen in members-documenten staan.
+    match /users/{uid} {
+      allow read, create, update, delete: if isSelf(uid);
+    }
+
+    // ------------------------------------------------------------- Clubs
+    match /clubs/{clubId} {
+      // Elke ingelogde gebruiker mag clubs zien (nodig om lidmaatschap te
+      // kunnen aanvragen).
+      allow read: if signedIn();
+      // Nieuwe club aanmaken mag; de batch schrijft tegelijk het eigen
+      // clubAdmin-membership (zie members-regels hieronder).
+      allow create: if signedIn();
+      allow update, delete: if isClubAdmin(clubId);
+
+      // ------------------------------------------------------- Members
+      match /members/{uid} {
+        // Lezen: het eigen membership, of elk membership als actief clublid.
+        allow read: if isSelf(uid) || isActiveMember(clubId);
+
+        // Aanmaken:
+        //  1. Aanvraag: zelf, status 'pending', rol 'player'.
+        //  2. Via uitnodiging: zelf, status 'active', met een geldige code
+        //     in het veld inviteCode (gevalideerd tegen inviteCodes/{code}).
+        //  3. Oprichter: zelf als clubAdmin in dezelfde batch waarin de club
+        //     wordt aangemaakt (club bestaat op dat moment nog niet).
+        //  4. Clubadmin mag leden toevoegen.
+        allow create: if isClubAdmin(clubId)
+          || (
+            isSelf(uid)
+            && request.resource.data.uid == uid
+            && request.resource.data.clubId == clubId
+            && (
+              // (1) aanvraag
+              (request.resource.data.status == 'pending'
+                && request.resource.data.role == 'player')
+              // (2) uitnodiging
+              || (request.resource.data.status == 'active'
+                && validInvite(clubId))
+              // (3) oprichter
+              || (request.resource.data.status == 'active'
+                && request.resource.data.role == 'clubAdmin'
+                && !exists(/databases/$(database)/documents/clubs/$(clubId)))
+            )
+          );
+
+        // Wijzigen: clubadmin (goedkeuren, rol, ploegindeling), of zelf
+        // toetreden met een geldige uitnodigingscode op een bestaande
+        // (pending) aanvraag.
+        allow update: if isClubAdmin(clubId)
+          || (
+            isSelf(uid)
+            && request.resource.data.uid == uid
+            && request.resource.data.clubId == clubId
+            && request.resource.data.status == 'active'
+            && validInvite(clubId)
+          );
+
+        // Verwijderen: zelf (verlaten / aanvraag intrekken) of clubadmin
+        // (weigeren / lid verwijderen).
+        allow delete: if isSelf(uid) || isClubAdmin(clubId);
+
+        function validInvite(clubId) {
+          let code = request.resource.data.inviteCode;
+          let invite = get(/databases/$(database)/documents/inviteCodes/$(code)).data;
+          return code is string
+            && invite.clubId == clubId
+            && invite.active == true
+            && request.resource.data.role == invite.role
+            && (invite.expiresAt == null || request.time < invite.expiresAt);
+        }
+      }
+
+      // --------------------------------------------------------- Teams
+      match /teams/{teamId} {
+        allow read: if isActiveMember(clubId);
+        allow create, update, delete: if isClubAdmin(clubId);
+      }
+
+      // ------------------------------------------------------- Invites
+      match /invites/{code} {
+        allow read, create, update, delete: if isClubAdmin(clubId);
+      }
+
+      // ----------------------------------------------- Timer-bibliotheek
+      // timerExercises en timerSets staan (historisch) op clubniveau, niet
+      // onder displays. Het display-web-app leest ze niet (dat leest alleen
+      // displays/{id}/settings/timer), dus lezen kan beperkt blijven tot
+      // actieve clubleden.
+      match /timerExercises/{exerciseId} {
+        allow read: if isActiveMember(clubId);
+        allow write: if isTrainerOrAdmin(clubId);
+      }
+      match /timerSets/{setId} {
+        allow read: if isActiveMember(clubId);
+        allow write: if isTrainerOrAdmin(clubId);
+      }
+
+      // ------------------------------------------- Tabata standaard sets
+      // Bibliotheek van opgeslagen tabata-sets (snelkoppelingen), zelfde
+      // model als de timer-bibliotheek: clubniveau, lezen voor actieve
+      // leden, schrijven voor trainers/clubadmins.
+      match /tabataPresets/{presetId} {
+        allow read: if isActiveMember(clubId);
+        allow write: if isTrainerOrAdmin(clubId);
+      }
+
+      // ------------------------------------------------------ Displays
+      // Bestaande display-feature. Schrijven: trainers en clubadmins.
+      // Lezen staat open zodat het (ongeauthenticeerde) display-web-app de
+      // content kan tonen; scherp dit aan zodra het display zich
+      // authenticeert.
+      match /displays/{displayId}/{document=**} {
+        allow read: if true;
+        allow write: if isTrainerOrAdmin(clubId);
+      }
+    }
+
+    // ----------------------------------------- Collection-group: members
+    // Nodig voor de "mijn clubs"-query (collectionGroup('members')
+    // .where('uid', == eigen uid)). De filter op uid maakt de query
+    // bewijsbaar veilig: je ziet alleen je eigen membership-documenten.
+    match /{path=**}/members/{memberId} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // ------------------------------------------------------ Invite codes
+    // De code is het geheim: alleen 'get' per exacte code, nooit 'list'.
+    // Schrijven mag alleen door de clubadmin van de club in kwestie.
+    match /inviteCodes/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create, update: if signedIn()
+        && isClubAdmin(request.resource.data.clubId);
+      allow delete: if signedIn()
+        && isClubAdmin(resource.data.clubId);
+    }
+  }
+}

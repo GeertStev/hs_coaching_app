@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
+//import 'dart:ui' as ui;
 import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
 
 class SketchPainter extends CustomPainter {
@@ -10,7 +10,7 @@ class SketchPainter extends CustomPainter {
     this.selectedElementId,
     required this.actualSize,
     required this.targetSize,
-    this.backgroundImage,
+    //this.backgroundImage,
   });
 
   final List<SketchElement> elements;
@@ -18,7 +18,7 @@ class SketchPainter extends CustomPainter {
   final String? selectedElementId;
   final Size actualSize;
   final Size targetSize;
-  final ui.Image? backgroundImage;
+  //final ui.Image? backgroundImage;
 
   /// Scales an offset from the target coordinate system to the local canvas system.
   Offset _scaleToLocal(Offset targetOffset) {
@@ -37,29 +37,45 @@ class SketchPainter extends CustomPainter {
     return targetValue * ((scaleX + scaleY) / 2.0);
   }
 
+  // Ray-casting (Pnpoly) algoritme om te bepalen of een punt zich in een veelhoek bevindt
+  static bool _isPointInPolygon(Offset p, List<Offset> vertices) {
+    var inside = false;
+    var j = vertices.length - 1;
+    for (var i = 0; i < vertices.length; i++) {
+      if (((vertices[i].dy > p.dy) != (vertices[j].dy > p.dy)) &&
+          (p.dx <
+              (vertices[j].dx - vertices[i].dx) *
+                      (p.dy - vertices[i].dy) /
+                      (vertices[j].dy - vertices[i].dy) +
+                  vertices[i].dx)) {
+        inside = !inside;
+      }
+      j = i;
+    }
+    return inside;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
-    // 1. Draw the background image first, if it exists.
-    if (backgroundImage != null) {
-      final paint = Paint();
-      final src = Rect.fromLTWH(
-        0,
-        0,
-        backgroundImage!.width.toDouble(),
-        backgroundImage!.height.toDouble(),
-      );
-      final dst = Rect.fromLTWH(0, 0, size.width, size.height);
-      canvas.drawImageRect(backgroundImage!, src, dst, paint);
-    }
-
-    // Paint all existing elements, except any that are currently being moved/updated
     final currentIds = currentElements.map((e) => e.id).toSet();
-    for (final element in elements.where((e) => !currentIds.contains(e.id))) {
+    final staticElements = elements
+        .where((e) => !currentIds.contains(e.id))
+        .toList();
+
+    // 1. Teken eerst de stilstaande lijnen en vormen (alles behalve iconen)
+    for (final element in staticElements.where((e) => e is! IconElement)) {
       _drawElement(canvas, size, element);
     }
-
-    // Paint elements that are currently being drawn or moved
-    for (final element in currentElements) {
+    // 2. Teken dan de bewegende/getekende lijnen en vormen
+    for (final element in currentElements.where((e) => e is! IconElement)) {
+      _drawElement(canvas, size, element);
+    }
+    // 3. Teken stilstaande icoontjes er bovenop
+    for (final element in staticElements.whereType<IconElement>()) {
+      _drawElement(canvas, size, element);
+    }
+    // 4. Teken tot slot de momenteel versleepte icoontjes
+    for (final element in currentElements.whereType<IconElement>()) {
       _drawElement(canvas, size, element);
     }
 
@@ -69,8 +85,6 @@ class SketchPainter extends CustomPainter {
       _drawSelectionUI(canvas, selectedElement);
     } else if (_findElementById(selectedElementId, checkCurrent: false) !=
         null) {
-      // If the selected element is being transformed, it's in currentElements.
-      // We still want to draw its selection UI.
       _drawSelectionUI(
         canvas,
         _findElementById(selectedElementId, checkCurrent: false)!,
@@ -198,6 +212,63 @@ class SketchPainter extends CustomPainter {
         paint.color = color;
         paint.strokeWidth = _scaleValueToLocal(strokeWidth.toDouble());
         canvas.drawRect(rect, paint);
+
+      case PolygonElement(
+        :final points,
+        :final color,
+        :final strokeWidth,
+        :final fillColor,
+      ):
+        if (points.isEmpty) return;
+
+        final paint = Paint()
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round;
+
+        final path = Path();
+        final firstPoint = _scaleToLocal(points.first.offset);
+        path.moveTo(firstPoint.dx, firstPoint.dy);
+        for (var i = 1; i < points.length; i++) {
+          final point = _scaleToLocal(points[i].offset);
+          path.lineTo(point.dx, point.dy);
+        }
+        path.close(); // Maak de vorm sluitend!
+
+        // Teken vulling
+        if (fillColor != null) {
+          paint
+            ..style = PaintingStyle.fill
+            ..color = fillColor;
+          canvas.drawPath(path, paint);
+        }
+
+        // Teken randen
+        paint
+          ..style = PaintingStyle.stroke
+          ..color = color
+          ..strokeWidth = _scaleValueToLocal(strokeWidth.toDouble());
+        canvas.drawPath(path, paint);
+
+        // EXTRA: Als deze veelhoek op dit moment getekend wordt (in currentElements),
+        // teken dan kleine hulpcirkels op de hoekpunten zodat de coach ziet waar hij kan klikken.
+        final isTemporary = currentElements.any((e) => e.id == element.id);
+        if (isTemporary) {
+          final vertexPaint = Paint()
+            ..color = Colors.blue
+            ..style = PaintingStyle.fill;
+          for (final p in points) {
+            canvas.drawCircle(_scaleToLocal(p.offset), 4.0, vertexPaint);
+          }
+          // Highlight het allereerste punt extra als 'sluitingsdoel'
+          canvas.drawCircle(
+            _scaleToLocal(points.first.offset),
+            7.0,
+            Paint()
+              ..color = Colors.green
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2.0,
+          );
+        }
 
       case CircleElement(
         :final center,
@@ -329,9 +400,9 @@ class SketchPainter extends CustomPainter {
     Size actualSize,
     Size targetSize,
   ) {
-    // Define a tolerance for how close the user must be to an element to erase it.
+    // Define a tolerance for how close the user must be to an element to erase/select it.
     // This could be a fixed value or based on the element's stroke width.
-    const double hitTolerance = 10.0;
+    const double hitTolerance = 25.0;
 
     // Helper to scale offsets from target to local space for hit testing
     Offset scaleToLocal(Offset o) {
@@ -405,6 +476,32 @@ class SketchPainter extends CustomPainter {
             distanceToSegment(localPoint, tr, br) <= tolerance / 2 ||
             distanceToSegment(localPoint, br, bl) <= tolerance / 2 ||
             distanceToSegment(localPoint, bl, tl) <= tolerance / 2;
+
+      case PolygonElement(:final points, :final strokeWidth, :final fillColor):
+        if (points.length < 3) return false;
+        final tolerance = math.max(
+          hitTolerance,
+          scaleValToLocal(strokeWidth.toDouble()),
+        );
+
+        // 1. Check of de klik op de perimeter (de randen) ligt
+        for (var i = 0; i < points.length; i++) {
+          final p1 = scaleToLocal(points[i].offset);
+          // Sluit de lus door van het laatste punt terug naar het eerste te gaan (% points.length)
+          final p2 = scaleToLocal(points[(i + 1) % points.length].offset);
+          if (distanceToSegment(localPoint, p1, p2) <= tolerance / 2) {
+            return true;
+          }
+        }
+
+        // 2. Als de veelhoek gevuld is, check dan of de klik binnen de veelhoek valt (Ray-Casting)
+        if (fillColor != null) {
+          final localVertices = points
+              .map((p) => scaleToLocal(p.offset))
+              .toList();
+          return _isPointInPolygon(localPoint, localVertices);
+        }
+        return false;
 
       case CircleElement(:final center, :final radius, :final strokeWidth):
         final localCenter = scaleToLocal(center);
@@ -482,6 +579,25 @@ class SketchPainter extends CustomPainter {
         return Rect.fromPoints(
           scale(start),
           scale(end),
+        ).inflate(scaleVal(strokeWidth.toDouble()));
+      case PolygonElement(:final points, :final strokeWidth):
+        if (points.isEmpty) return Rect.zero;
+        var l = scale(points.first.offset).dx,
+            r = l,
+            t = scale(points.first.offset).dy,
+            b = t;
+        for (final p in points) {
+          final localP = scale(p.offset);
+          l = math.min(l, localP.dx);
+          r = math.max(r, localP.dx);
+          t = math.min(t, localP.dy);
+          b = math.max(b, localP.dy);
+        }
+        return Rect.fromLTRB(
+          l,
+          t,
+          r,
+          b,
         ).inflate(scaleVal(strokeWidth.toDouble()));
       case CircleElement(:final center, :final radius, :final strokeWidth):
         return Rect.fromCircle(

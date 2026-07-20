@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-//import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
 import 'package:hs_coaching_app/features/display/data/display_global_settings_repository.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_providers.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_data_providers.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_canvas.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/toolbar.dart';
 
@@ -16,20 +15,6 @@ class SketchScreen extends ConsumerStatefulWidget {
 }
 
 class _SketchScreenState extends ConsumerState<SketchScreen> {
-  @override
-  /*void initState() {
-    super.initState();
-    // Set the current sketch ID when the screen is initialized.
-    // We use a post-frame callback to ensure the provider is ready.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(currentSketchIdProvider.notifier).selectSketch(widget.sketchId);
-      // Update the timestamp when the sketch is opened for editing.
-      final ids = ref.read(displayDeviceIdsProvider);
-      ref
-          .read(sketchRepositoryProvider)
-          .updateSketchTimestamp(widget.sketchId, ids);
-    });
-  }*/
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(globalSettingsProvider);

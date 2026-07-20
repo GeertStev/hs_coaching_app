@@ -51,7 +51,7 @@ class DisplayContentSettingsRepository {
           contentType: DisplayContentType.main,
         );
       }
-      return DisplayContentSettings.fromMap(
+      return DisplayContentSettings.fromJson(
         snapshot.data() as Map<String, dynamic>,
       );
     });

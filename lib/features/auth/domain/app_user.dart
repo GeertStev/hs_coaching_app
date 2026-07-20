@@ -1,5 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hs_coaching_app/core/data/firestore_converters.dart';
 
 part 'app_user.freezed.dart';
 part 'app_user.g.dart';
@@ -12,14 +12,27 @@ abstract class AppUser with _$AppUser {
     String uid,
     required String firstName,
     required String lastName,
+    String? email,
     String? picture,
-    required String role,
-    @TimestampConverter() required DateTime lastLogin,
+    @Default('user') String role,
+    @NullableTimestampConverter() DateTime? lastLogin,
     @Default([]) List<PersonalInfo> personalInfo,
   }) = _AppUser;
 
+  const AppUser._();
+
   factory AppUser.fromJson(Map<String, dynamic> json) =>
       _$AppUserFromJson(json);
+
+  /// Volledige naam voor weergave.
+  String get fullName => '$firstName $lastName'.trim();
+
+  /// Initiaal voor de avatar (voornaam, anders achternaam, anders '?').
+  String get initial {
+    if (firstName.isNotEmpty) return firstName[0].toUpperCase();
+    if (lastName.isNotEmpty) return lastName[0].toUpperCase();
+    return '?';
+  }
 }
 
 @freezed
@@ -35,7 +48,7 @@ abstract class PersonalInfo with _$PersonalInfo {
     String? country,
     String? phoneNumber,
     required String email,
-    @TimestampConverter() DateTime? birthday,
+    @NullableTimestampConverter() DateTime? birthday,
     String? gender,
     @Default([]) List<EmergencyContact> emergencyContacts,
   }) = _PersonalInfo;
@@ -57,18 +70,4 @@ abstract class EmergencyContact with _$EmergencyContact {
 
   factory EmergencyContact.fromJson(Map<String, dynamic> json) =>
       _$EmergencyContactFromJson(json);
-}
-
-/// A utility class for converting Firestore Timestamps to DateTime objects and vice-versa.
-/// This is necessary for Freezed to correctly handle the conversion.
-class TimestampConverter implements JsonConverter<DateTime, Timestamp> {
-  const TimestampConverter();
-
-  @override
-  DateTime fromJson(Timestamp timestamp) {
-    return timestamp.toDate();
-  }
-
-  @override
-  Timestamp toJson(DateTime date) => Timestamp.fromDate(date);
 }

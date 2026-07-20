@@ -15,7 +15,6 @@ class ChronoRepository {
   final String _displayId;
 
   DocumentReference get _chronoSettingsRef {
-    // Path: /clubs/{clubId}/displays/{displayDeviceId}/settings/chrono
     return _firestore
         .collection('clubs')
         .doc(_clubId)
@@ -25,44 +24,33 @@ class ChronoRepository {
         .doc('chrono');
   }
 
-  /// Returns a stream of the current chrono settings.
   Stream<Chrono> watchChrono() {
     return _chronoSettingsRef.snapshots().map((snapshot) {
       if (!snapshot.exists || snapshot.data() == null) {
-        return const Chrono(); // Default settings if document doesn't exist
+        return const Chrono();
       }
       return Chrono.fromJson(snapshot.data() as Map<String, dynamic>);
     });
   }
 
-  /// Starts or resumes the stopwatch.
-  ///
-  /// Writes the authoritative start time from the control app's clock and
-  /// requests a server timestamp for synchronization.
-  Future<void> start(Chrono currentChrono) async {
-    final eventTime = DateTime.now().millisecondsSinceEpoch;
-
+  Future<void> start(Chrono currentChrono, {int countdownMillis = 0}) async {
+    // Verschuif de starttijd naar de toekomst als er een countdown is
+    final eventTime = DateTime.now().millisecondsSinceEpoch + countdownMillis;
     await _chronoSettingsRef.set({
       'status': ChronoStatus.running.name,
       'authoritativeStartTimeMillis': eventTime,
       'serverWriteTimestamp': FieldValue.serverTimestamp(),
-      // Carry over the previously accumulated time if we are resuming
       'accumulatedElapsedMillis': currentChrono.accumulatedElapsedMillis,
+      'laps': currentChrono.laps, // Behoud bestaande rondes
     });
   }
 
-  /// Pauses the stopwatch.
-  ///
-  /// Calculates the elapsed time since the last start event and adds it to the
-  /// accumulated total.
   Future<void> pause(Chrono currentChrono) async {
     if (currentChrono.status != ChronoStatus.running) return;
 
     final pauseEventTime = DateTime.now().millisecondsSinceEpoch;
     final newlyElapsed =
         pauseEventTime - currentChrono.authoritativeStartTimeMillis;
-
-    // Ensure newlyElapsed is not negative due to clock sync edge cases
     final totalAccumulated =
         currentChrono.accumulatedElapsedMillis +
         (newlyElapsed > 0 ? newlyElapsed : 0);
@@ -73,13 +61,17 @@ class ChronoRepository {
     });
   }
 
-  /// Resets the stopwatch to its initial state.
+  Future<void> lap(Chrono currentChrono, List<int> newLaps) async {
+    await _chronoSettingsRef.update({'laps': newLaps});
+  }
+
   Future<void> reset() async {
     await _chronoSettingsRef.set({
       'status': ChronoStatus.stopped.name,
       'authoritativeStartTimeMillis': 0,
       'serverWriteTimestamp': null,
       'accumulatedElapsedMillis': 0,
+      'laps': [], // Rondes resetten
     });
   }
 }

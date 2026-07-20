@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_data_providers.dart';
+//import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_service_providers.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/display_sketch_controller.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
-import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog_parts.dart';
+//import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog_parts.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_sheet.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_providers.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_screen.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/widgets/sketch_list.dart';
 
@@ -20,9 +21,9 @@ class SketchControlScreen extends ConsumerStatefulWidget {
 
 class _SketchControlScreenState extends ConsumerState<SketchControlScreen> {
   Future<void> _createNewSketch() async {
-    String? selectedBackgroundUrl;
+    /*String? selectedBackgroundUrl;
+    final allBackgrounds = ref.read(sketchBackgroundsProvider).value ?? [];*/
     final allTags = ref.read(allSketchTagsProvider).value ?? [];
-    final allBackgrounds = ref.read(sketchBackgroundsProvider).value ?? [];
 
     final result = await showModalBottomSheet<ContentEditDialogResult>(
       context: context,
@@ -32,11 +33,11 @@ class _SketchControlScreenState extends ConsumerState<SketchControlScreen> {
         allTags: allTags,
         isNewItem: true,
         showSecondaryAction: true, // 'Add to List' is 'create off-screen'
-        contentSpecificWidget: SketchContentEditor(
+        /*contentSpecificWidget: SketchContentEditor(
           allBackgrounds: allBackgrounds,
           selectedUrl: selectedBackgroundUrl,
           onSelected: (url) => selectedBackgroundUrl = url,
-        ),
+        ),*/
       ),
     );
 
@@ -49,7 +50,7 @@ class _SketchControlScreenState extends ConsumerState<SketchControlScreen> {
         .read(sketchControllerProvider.notifier)
         .createSketch(
           result: result,
-          backgroundUrl: selectedBackgroundUrl,
+          backgroundUrl: null,
           setAsCurrent: isDisplayAction,
         );
 
@@ -67,14 +68,7 @@ class _SketchControlScreenState extends ConsumerState<SketchControlScreen> {
 
     ref.read(sketchRepositoryProvider).updateSketchTimestamp(sketchId);
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ProviderScope(
-          overrides: [
-            commandHistoryProvider.overrideWith(CommandHistoryNotifier.new),
-          ],
-          child: SketchScreen(sketchId: sketchId),
-        ),
-      ),
+      MaterialPageRoute(builder: (context) => SketchScreen(sketchId: sketchId)),
     );
   }
 

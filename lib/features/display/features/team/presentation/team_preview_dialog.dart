@@ -43,6 +43,7 @@ class TeamPreviewDialog extends ConsumerWidget {
       actions: [
         OutlinedButton.icon(
           icon: const Icon(Icons.refresh, size: 18),
+          // Spinning icon on refresh
           label: const Text('Refresh local'),
           style: OutlinedButton.styleFrom(
             side: BorderSide(color: Theme.of(context).colorScheme.outline),

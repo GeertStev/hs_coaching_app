@@ -1,10 +1,9 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_background.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/presentation/widgets/select_sketch_background_dialog.dart';
+//import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_background.dart';
+//import 'package:hs_coaching_app/features/display/features/sketch/presentation/widgets/select_sketch_background_dialog.dart';
 
-/// Content-specific widget for selecting a sketch background.
+/*/// Content-specific widget for selecting a sketch background.
 class SketchContentEditor extends StatefulWidget {
   const SketchContentEditor({
     super.key,
@@ -64,6 +63,7 @@ class _SketchContentEditorState extends State<SketchContentEditor> {
     );
   }
 }
+*/
 
 /// Content-specific widget for selecting/previewing an image.
 class ImageContentEditor extends StatelessWidget {

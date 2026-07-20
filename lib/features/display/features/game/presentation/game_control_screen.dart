@@ -108,27 +108,18 @@ class _TeamControl extends StatelessWidget {
           teamColor: teamColor,
         ),
         Container(
-          height: 240,
-          width: 150,
+          height: 120,
+          width: 120,
           decoration: BoxDecoration(
             color: teamColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: backgroundColor, width: 4),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Text(
-                teamName,
-                style: textTheme.headlineMedium!.copyWith(
-                  color: backgroundColor,
-                ),
-              ),
-              Text(
-                score.toString(),
-                style: textTheme.displayLarge!.copyWith(color: backgroundColor),
-              ),
-            ],
+          child: Center(
+            child: Text(
+              score.toString(),
+              style: textTheme.displayLarge!.copyWith(color: backgroundColor),
+            ),
           ),
         ),
         GameIconButton(
@@ -158,20 +149,31 @@ class GameIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton.filled(
-      icon: Icon(icon),
-      onPressed: onIncrement,
-      iconSize: 64,
-      color: backgroundColor,
+    return Container(
+      height: 120,
+      width: 120,
+      decoration: BoxDecoration(
+        color: teamColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: backgroundColor, width: 4),
+      ),
+      child: IconButton.filled(
+        icon: Icon(icon),
+        onPressed: onIncrement,
+        iconSize: 64,
+        color: backgroundColor,
 
-      style: IconButton.styleFrom(
-        backgroundColor: teamColor,
-        shadowColor: Colors.black,
-        elevation: 5,
-        // border
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        // outline
-        side: BorderSide(color: backgroundColor, width: 4),
+        style: IconButton.styleFrom(
+          backgroundColor: teamColor,
+          //shadowColor: Colors.black,
+          //elevation: 5,
+          // border
+          /*shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          // outline
+          side: BorderSide(color: backgroundColor, width: 4),*/
+        ),
       ),
     );
   }

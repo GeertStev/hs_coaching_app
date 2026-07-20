@@ -35,7 +35,9 @@ Restricting functionality (acces to screenfunctionality only for moderators)
 * Avatar
 * Birthdate
 * Administrative properties (adress, billing status, health check status)
-### Player statistics
+### Player statistics (added by trainer, no possibility for players to edit)
+* ELO rating (synced from Google sheet = NO LIVE SYNC, admin syncs for all players)
+* Totem (synced from Google sheet = NO LIVE SYNC, admin syncs for all players)
 * Speed (25m sprint, 50m sprint, ...)
 * Maximum length underwater
 * Times present on training

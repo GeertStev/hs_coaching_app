@@ -15,11 +15,13 @@ abstract class Chrono with _$Chrono {
     @Default(0) int authoritativeStartTimeMillis,
 
     /// Firestore server timestamp of when the start event was written.
-    /// This is used to calculate the clock offset.
     @ServerTimestampConverter() Timestamp? serverWriteTimestamp,
 
     /// Time accumulated before the current running session.
     @Default(0) int accumulatedElapsedMillis,
+
+    /// Lijst met rondetijden (opgeslagen als geaccumuleerde verstreken tijd in millis)
+    @Default([]) List<int> laps,
   }) = _Chrono;
 
   factory Chrono.fromJson(Map<String, dynamic> json) => _$ChronoFromJson(json);

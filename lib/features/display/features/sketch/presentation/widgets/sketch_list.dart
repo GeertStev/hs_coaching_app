@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_data_providers.dart';
+//import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_service_providers.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_ui_providers.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/display_sketch_controller.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
-import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog_parts.dart';
+//import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog_parts.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_sheet.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_providers.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_screen.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_item_card.dart';
@@ -19,9 +21,9 @@ class SketchList extends ConsumerWidget {
     WidgetRef ref,
     Sketch sketch,
   ) async {
-    String? selectedBackgroundUrl = sketch.backgroundUrl;
     final allTags = ref.read(allSketchTagsProvider).value ?? [];
-    final allBackgrounds = ref.read(sketchBackgroundsProvider).value ?? [];
+    /*String? selectedBackgroundUrl = sketch.backgroundUrl;
+    final allBackgrounds = ref.read(sketchBackgroundsProvider).value ?? [];*/
 
     final result = await showModalBottomSheet<ContentEditDialogResult>(
       context: context,
@@ -34,11 +36,11 @@ class SketchList extends ConsumerWidget {
         allTags: allTags,
         isNewItem: false,
         showSecondaryAction: false,
-        contentSpecificWidget: SketchContentEditor(
+        /*contentSpecificWidget: SketchContentEditor(
           allBackgrounds: allBackgrounds,
           selectedUrl: selectedBackgroundUrl,
           onSelected: (url) => selectedBackgroundUrl = url,
-        ),
+        ),*/
       ),
     );
 
@@ -50,21 +52,14 @@ class SketchList extends ConsumerWidget {
         .updateSketch(
           sketchId: sketch.id,
           result: result,
-          backgroundUrl: selectedBackgroundUrl,
+          backgroundUrl: sketch.backgroundUrl,
         );
   }
 
   void _navigateToSketch(BuildContext context, WidgetRef ref, String sketchId) {
     ref.read(sketchRepositoryProvider).updateSketchTimestamp(sketchId);
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ProviderScope(
-          overrides: [
-            commandHistoryProvider.overrideWith(CommandHistoryNotifier.new),
-          ],
-          child: SketchScreen(sketchId: sketchId),
-        ),
-      ),
+      MaterialPageRoute(builder: (context) => SketchScreen(sketchId: sketchId)),
     );
   }
 

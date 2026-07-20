@@ -37,3 +37,8 @@ final appUserProvider = StreamProvider<AppUser?>((ref) {
   if (uid == null) return Stream.value(null);
   return ref.watch(authRepositoryProvider).userStream(uid);
 });
+
+/// De uid van de ingelogde gebruiker, of `null` als niemand is ingelogd.
+final currentUidProvider = Provider<String?>((ref) {
+  return ref.watch(authStateChangesProvider).asData?.value?.uid;
+});

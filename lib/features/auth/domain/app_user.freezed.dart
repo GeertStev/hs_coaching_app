@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AppUser {
 
-@JsonKey(includeFromJson: false, includeToJson: false) String get uid; String get firstName; String get lastName; String? get picture; String get role;@TimestampConverter() DateTime get lastLogin; List<PersonalInfo> get personalInfo;
+@JsonKey(includeFromJson: false, includeToJson: false) String get uid; String get firstName; String get lastName; String? get email; String? get picture; String get role;@NullableTimestampConverter() DateTime? get lastLogin; List<PersonalInfo> get personalInfo;
 /// Create a copy of AppUser
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $AppUserCopyWith<AppUser> get copyWith => _$AppUserCopyWithImpl<AppUser>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AppUser&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.firstName, firstName) || other.firstName == firstName)&&(identical(other.lastName, lastName) || other.lastName == lastName)&&(identical(other.picture, picture) || other.picture == picture)&&(identical(other.role, role) || other.role == role)&&(identical(other.lastLogin, lastLogin) || other.lastLogin == lastLogin)&&const DeepCollectionEquality().equals(other.personalInfo, personalInfo));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AppUser&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.firstName, firstName) || other.firstName == firstName)&&(identical(other.lastName, lastName) || other.lastName == lastName)&&(identical(other.email, email) || other.email == email)&&(identical(other.picture, picture) || other.picture == picture)&&(identical(other.role, role) || other.role == role)&&(identical(other.lastLogin, lastLogin) || other.lastLogin == lastLogin)&&const DeepCollectionEquality().equals(other.personalInfo, personalInfo));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,uid,firstName,lastName,picture,role,lastLogin,const DeepCollectionEquality().hash(personalInfo));
+int get hashCode => Object.hash(runtimeType,uid,firstName,lastName,email,picture,role,lastLogin,const DeepCollectionEquality().hash(personalInfo));
 
 @override
 String toString() {
-  return 'AppUser(uid: $uid, firstName: $firstName, lastName: $lastName, picture: $picture, role: $role, lastLogin: $lastLogin, personalInfo: $personalInfo)';
+  return 'AppUser(uid: $uid, firstName: $firstName, lastName: $lastName, email: $email, picture: $picture, role: $role, lastLogin: $lastLogin, personalInfo: $personalInfo)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $AppUserCopyWith<$Res>  {
   factory $AppUserCopyWith(AppUser value, $Res Function(AppUser) _then) = _$AppUserCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(includeFromJson: false, includeToJson: false) String uid, String firstName, String lastName, String? picture, String role,@TimestampConverter() DateTime lastLogin, List<PersonalInfo> personalInfo
+@JsonKey(includeFromJson: false, includeToJson: false) String uid, String firstName, String lastName, String? email, String? picture, String role,@NullableTimestampConverter() DateTime? lastLogin, List<PersonalInfo> personalInfo
 });
 
 
@@ -65,15 +65,16 @@ class _$AppUserCopyWithImpl<$Res>
 
 /// Create a copy of AppUser
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? uid = null,Object? firstName = null,Object? lastName = null,Object? picture = freezed,Object? role = null,Object? lastLogin = null,Object? personalInfo = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? uid = null,Object? firstName = null,Object? lastName = null,Object? email = freezed,Object? picture = freezed,Object? role = null,Object? lastLogin = freezed,Object? personalInfo = null,}) {
   return _then(_self.copyWith(
 uid: null == uid ? _self.uid : uid // ignore: cast_nullable_to_non_nullable
 as String,firstName: null == firstName ? _self.firstName : firstName // ignore: cast_nullable_to_non_nullable
 as String,lastName: null == lastName ? _self.lastName : lastName // ignore: cast_nullable_to_non_nullable
-as String,picture: freezed == picture ? _self.picture : picture // ignore: cast_nullable_to_non_nullable
+as String,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
+as String?,picture: freezed == picture ? _self.picture : picture // ignore: cast_nullable_to_non_nullable
 as String?,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
-as String,lastLogin: null == lastLogin ? _self.lastLogin : lastLogin // ignore: cast_nullable_to_non_nullable
-as DateTime,personalInfo: null == personalInfo ? _self.personalInfo : personalInfo // ignore: cast_nullable_to_non_nullable
+as String,lastLogin: freezed == lastLogin ? _self.lastLogin : lastLogin // ignore: cast_nullable_to_non_nullable
+as DateTime?,personalInfo: null == personalInfo ? _self.personalInfo : personalInfo // ignore: cast_nullable_to_non_nullable
 as List<PersonalInfo>,
   ));
 }
@@ -159,10 +160,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(includeFromJson: false, includeToJson: false)  String uid,  String firstName,  String lastName,  String? picture,  String role, @TimestampConverter()  DateTime lastLogin,  List<PersonalInfo> personalInfo)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(includeFromJson: false, includeToJson: false)  String uid,  String firstName,  String lastName,  String? email,  String? picture,  String role, @NullableTimestampConverter()  DateTime? lastLogin,  List<PersonalInfo> personalInfo)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AppUser() when $default != null:
-return $default(_that.uid,_that.firstName,_that.lastName,_that.picture,_that.role,_that.lastLogin,_that.personalInfo);case _:
+return $default(_that.uid,_that.firstName,_that.lastName,_that.email,_that.picture,_that.role,_that.lastLogin,_that.personalInfo);case _:
   return orElse();
 
 }
@@ -180,10 +181,10 @@ return $default(_that.uid,_that.firstName,_that.lastName,_that.picture,_that.rol
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(includeFromJson: false, includeToJson: false)  String uid,  String firstName,  String lastName,  String? picture,  String role, @TimestampConverter()  DateTime lastLogin,  List<PersonalInfo> personalInfo)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(includeFromJson: false, includeToJson: false)  String uid,  String firstName,  String lastName,  String? email,  String? picture,  String role, @NullableTimestampConverter()  DateTime? lastLogin,  List<PersonalInfo> personalInfo)  $default,) {final _that = this;
 switch (_that) {
 case _AppUser():
-return $default(_that.uid,_that.firstName,_that.lastName,_that.picture,_that.role,_that.lastLogin,_that.personalInfo);case _:
+return $default(_that.uid,_that.firstName,_that.lastName,_that.email,_that.picture,_that.role,_that.lastLogin,_that.personalInfo);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +201,10 @@ return $default(_that.uid,_that.firstName,_that.lastName,_that.picture,_that.rol
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(includeFromJson: false, includeToJson: false)  String uid,  String firstName,  String lastName,  String? picture,  String role, @TimestampConverter()  DateTime lastLogin,  List<PersonalInfo> personalInfo)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(includeFromJson: false, includeToJson: false)  String uid,  String firstName,  String lastName,  String? email,  String? picture,  String role, @NullableTimestampConverter()  DateTime? lastLogin,  List<PersonalInfo> personalInfo)?  $default,) {final _that = this;
 switch (_that) {
 case _AppUser() when $default != null:
-return $default(_that.uid,_that.firstName,_that.lastName,_that.picture,_that.role,_that.lastLogin,_that.personalInfo);case _:
+return $default(_that.uid,_that.firstName,_that.lastName,_that.email,_that.picture,_that.role,_that.lastLogin,_that.personalInfo);case _:
   return null;
 
 }
@@ -214,16 +215,17 @@ return $default(_that.uid,_that.firstName,_that.lastName,_that.picture,_that.rol
 /// @nodoc
 @JsonSerializable()
 
-class _AppUser implements AppUser {
-  const _AppUser({@JsonKey(includeFromJson: false, includeToJson: false) this.uid = '', required this.firstName, required this.lastName, this.picture, required this.role, @TimestampConverter() required this.lastLogin, final  List<PersonalInfo> personalInfo = const []}): _personalInfo = personalInfo;
+class _AppUser extends AppUser {
+  const _AppUser({@JsonKey(includeFromJson: false, includeToJson: false) this.uid = '', required this.firstName, required this.lastName, this.email, this.picture, this.role = 'user', @NullableTimestampConverter() this.lastLogin, final  List<PersonalInfo> personalInfo = const []}): _personalInfo = personalInfo,super._();
   factory _AppUser.fromJson(Map<String, dynamic> json) => _$AppUserFromJson(json);
 
 @override@JsonKey(includeFromJson: false, includeToJson: false) final  String uid;
 @override final  String firstName;
 @override final  String lastName;
+@override final  String? email;
 @override final  String? picture;
-@override final  String role;
-@override@TimestampConverter() final  DateTime lastLogin;
+@override@JsonKey() final  String role;
+@override@NullableTimestampConverter() final  DateTime? lastLogin;
  final  List<PersonalInfo> _personalInfo;
 @override@JsonKey() List<PersonalInfo> get personalInfo {
   if (_personalInfo is EqualUnmodifiableListView) return _personalInfo;
@@ -245,16 +247,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AppUser&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.firstName, firstName) || other.firstName == firstName)&&(identical(other.lastName, lastName) || other.lastName == lastName)&&(identical(other.picture, picture) || other.picture == picture)&&(identical(other.role, role) || other.role == role)&&(identical(other.lastLogin, lastLogin) || other.lastLogin == lastLogin)&&const DeepCollectionEquality().equals(other._personalInfo, _personalInfo));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AppUser&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.firstName, firstName) || other.firstName == firstName)&&(identical(other.lastName, lastName) || other.lastName == lastName)&&(identical(other.email, email) || other.email == email)&&(identical(other.picture, picture) || other.picture == picture)&&(identical(other.role, role) || other.role == role)&&(identical(other.lastLogin, lastLogin) || other.lastLogin == lastLogin)&&const DeepCollectionEquality().equals(other._personalInfo, _personalInfo));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,uid,firstName,lastName,picture,role,lastLogin,const DeepCollectionEquality().hash(_personalInfo));
+int get hashCode => Object.hash(runtimeType,uid,firstName,lastName,email,picture,role,lastLogin,const DeepCollectionEquality().hash(_personalInfo));
 
 @override
 String toString() {
-  return 'AppUser(uid: $uid, firstName: $firstName, lastName: $lastName, picture: $picture, role: $role, lastLogin: $lastLogin, personalInfo: $personalInfo)';
+  return 'AppUser(uid: $uid, firstName: $firstName, lastName: $lastName, email: $email, picture: $picture, role: $role, lastLogin: $lastLogin, personalInfo: $personalInfo)';
 }
 
 
@@ -265,7 +267,7 @@ abstract mixin class _$AppUserCopyWith<$Res> implements $AppUserCopyWith<$Res> {
   factory _$AppUserCopyWith(_AppUser value, $Res Function(_AppUser) _then) = __$AppUserCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(includeFromJson: false, includeToJson: false) String uid, String firstName, String lastName, String? picture, String role,@TimestampConverter() DateTime lastLogin, List<PersonalInfo> personalInfo
+@JsonKey(includeFromJson: false, includeToJson: false) String uid, String firstName, String lastName, String? email, String? picture, String role,@NullableTimestampConverter() DateTime? lastLogin, List<PersonalInfo> personalInfo
 });
 
 
@@ -282,15 +284,16 @@ class __$AppUserCopyWithImpl<$Res>
 
 /// Create a copy of AppUser
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? uid = null,Object? firstName = null,Object? lastName = null,Object? picture = freezed,Object? role = null,Object? lastLogin = null,Object? personalInfo = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? uid = null,Object? firstName = null,Object? lastName = null,Object? email = freezed,Object? picture = freezed,Object? role = null,Object? lastLogin = freezed,Object? personalInfo = null,}) {
   return _then(_AppUser(
 uid: null == uid ? _self.uid : uid // ignore: cast_nullable_to_non_nullable
 as String,firstName: null == firstName ? _self.firstName : firstName // ignore: cast_nullable_to_non_nullable
 as String,lastName: null == lastName ? _self.lastName : lastName // ignore: cast_nullable_to_non_nullable
-as String,picture: freezed == picture ? _self.picture : picture // ignore: cast_nullable_to_non_nullable
+as String,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
+as String?,picture: freezed == picture ? _self.picture : picture // ignore: cast_nullable_to_non_nullable
 as String?,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
-as String,lastLogin: null == lastLogin ? _self.lastLogin : lastLogin // ignore: cast_nullable_to_non_nullable
-as DateTime,personalInfo: null == personalInfo ? _self._personalInfo : personalInfo // ignore: cast_nullable_to_non_nullable
+as String,lastLogin: freezed == lastLogin ? _self.lastLogin : lastLogin // ignore: cast_nullable_to_non_nullable
+as DateTime?,personalInfo: null == personalInfo ? _self._personalInfo : personalInfo // ignore: cast_nullable_to_non_nullable
 as List<PersonalInfo>,
   ));
 }
@@ -302,7 +305,7 @@ as List<PersonalInfo>,
 /// @nodoc
 mixin _$PersonalInfo {
 
-@JsonKey(includeFromJson: false, includeToJson: false) String get id; String? get street; String? get number; String? get zipCode; String? get city; String? get country; String? get phoneNumber; String get email;@TimestampConverter() DateTime? get birthday; String? get gender; List<EmergencyContact> get emergencyContacts;
+@JsonKey(includeFromJson: false, includeToJson: false) String get id; String? get street; String? get number; String? get zipCode; String? get city; String? get country; String? get phoneNumber; String get email;@NullableTimestampConverter() DateTime? get birthday; String? get gender; List<EmergencyContact> get emergencyContacts;
 /// Create a copy of PersonalInfo
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -335,7 +338,7 @@ abstract mixin class $PersonalInfoCopyWith<$Res>  {
   factory $PersonalInfoCopyWith(PersonalInfo value, $Res Function(PersonalInfo) _then) = _$PersonalInfoCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(includeFromJson: false, includeToJson: false) String id, String? street, String? number, String? zipCode, String? city, String? country, String? phoneNumber, String email,@TimestampConverter() DateTime? birthday, String? gender, List<EmergencyContact> emergencyContacts
+@JsonKey(includeFromJson: false, includeToJson: false) String id, String? street, String? number, String? zipCode, String? city, String? country, String? phoneNumber, String email,@NullableTimestampConverter() DateTime? birthday, String? gender, List<EmergencyContact> emergencyContacts
 });
 
 
@@ -450,7 +453,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(includeFromJson: false, includeToJson: false)  String id,  String? street,  String? number,  String? zipCode,  String? city,  String? country,  String? phoneNumber,  String email, @TimestampConverter()  DateTime? birthday,  String? gender,  List<EmergencyContact> emergencyContacts)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(includeFromJson: false, includeToJson: false)  String id,  String? street,  String? number,  String? zipCode,  String? city,  String? country,  String? phoneNumber,  String email, @NullableTimestampConverter()  DateTime? birthday,  String? gender,  List<EmergencyContact> emergencyContacts)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PersonalInfo() when $default != null:
 return $default(_that.id,_that.street,_that.number,_that.zipCode,_that.city,_that.country,_that.phoneNumber,_that.email,_that.birthday,_that.gender,_that.emergencyContacts);case _:
@@ -471,7 +474,7 @@ return $default(_that.id,_that.street,_that.number,_that.zipCode,_that.city,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(includeFromJson: false, includeToJson: false)  String id,  String? street,  String? number,  String? zipCode,  String? city,  String? country,  String? phoneNumber,  String email, @TimestampConverter()  DateTime? birthday,  String? gender,  List<EmergencyContact> emergencyContacts)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(includeFromJson: false, includeToJson: false)  String id,  String? street,  String? number,  String? zipCode,  String? city,  String? country,  String? phoneNumber,  String email, @NullableTimestampConverter()  DateTime? birthday,  String? gender,  List<EmergencyContact> emergencyContacts)  $default,) {final _that = this;
 switch (_that) {
 case _PersonalInfo():
 return $default(_that.id,_that.street,_that.number,_that.zipCode,_that.city,_that.country,_that.phoneNumber,_that.email,_that.birthday,_that.gender,_that.emergencyContacts);case _:
@@ -491,7 +494,7 @@ return $default(_that.id,_that.street,_that.number,_that.zipCode,_that.city,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(includeFromJson: false, includeToJson: false)  String id,  String? street,  String? number,  String? zipCode,  String? city,  String? country,  String? phoneNumber,  String email, @TimestampConverter()  DateTime? birthday,  String? gender,  List<EmergencyContact> emergencyContacts)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(includeFromJson: false, includeToJson: false)  String id,  String? street,  String? number,  String? zipCode,  String? city,  String? country,  String? phoneNumber,  String email, @NullableTimestampConverter()  DateTime? birthday,  String? gender,  List<EmergencyContact> emergencyContacts)?  $default,) {final _that = this;
 switch (_that) {
 case _PersonalInfo() when $default != null:
 return $default(_that.id,_that.street,_that.number,_that.zipCode,_that.city,_that.country,_that.phoneNumber,_that.email,_that.birthday,_that.gender,_that.emergencyContacts);case _:
@@ -506,7 +509,7 @@ return $default(_that.id,_that.street,_that.number,_that.zipCode,_that.city,_tha
 @JsonSerializable()
 
 class _PersonalInfo implements PersonalInfo {
-  const _PersonalInfo({@JsonKey(includeFromJson: false, includeToJson: false) this.id = '', this.street, this.number, this.zipCode, this.city, this.country, this.phoneNumber, required this.email, @TimestampConverter() this.birthday, this.gender, final  List<EmergencyContact> emergencyContacts = const []}): _emergencyContacts = emergencyContacts;
+  const _PersonalInfo({@JsonKey(includeFromJson: false, includeToJson: false) this.id = '', this.street, this.number, this.zipCode, this.city, this.country, this.phoneNumber, required this.email, @NullableTimestampConverter() this.birthday, this.gender, final  List<EmergencyContact> emergencyContacts = const []}): _emergencyContacts = emergencyContacts;
   factory _PersonalInfo.fromJson(Map<String, dynamic> json) => _$PersonalInfoFromJson(json);
 
 @override@JsonKey(includeFromJson: false, includeToJson: false) final  String id;
@@ -517,7 +520,7 @@ class _PersonalInfo implements PersonalInfo {
 @override final  String? country;
 @override final  String? phoneNumber;
 @override final  String email;
-@override@TimestampConverter() final  DateTime? birthday;
+@override@NullableTimestampConverter() final  DateTime? birthday;
 @override final  String? gender;
  final  List<EmergencyContact> _emergencyContacts;
 @override@JsonKey() List<EmergencyContact> get emergencyContacts {
@@ -560,7 +563,7 @@ abstract mixin class _$PersonalInfoCopyWith<$Res> implements $PersonalInfoCopyWi
   factory _$PersonalInfoCopyWith(_PersonalInfo value, $Res Function(_PersonalInfo) _then) = __$PersonalInfoCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(includeFromJson: false, includeToJson: false) String id, String? street, String? number, String? zipCode, String? city, String? country, String? phoneNumber, String email,@TimestampConverter() DateTime? birthday, String? gender, List<EmergencyContact> emergencyContacts
+@JsonKey(includeFromJson: false, includeToJson: false) String id, String? street, String? number, String? zipCode, String? city, String? country, String? phoneNumber, String email,@NullableTimestampConverter() DateTime? birthday, String? gender, List<EmergencyContact> emergencyContacts
 });
 
 

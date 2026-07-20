@@ -1,53 +1,46 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hs_coaching_app/features/display/features/team/models/player_model.dart';
+
+part 'team_model.freezed.dart';
+part 'team_model.g.dart';
 
 enum TeamColor { white, black }
 
 enum TeamPositions { front, center, wing, goalie }
 
-class Team {
-  Team({
-    required this.teamColor,
-    required this.front,
-    required this.center,
-    required this.wing,
-    required this.goalie,
-  });
-  final TeamColor teamColor;
-  final List<Player> front;
-  final List<Player> center;
-  final List<Player> wing;
-  final List<Player> goalie;
+@freezed
+abstract class Team with _$Team {
+  const factory Team({
+    required TeamColor teamColor,
+    required List<Player> front,
+    required List<Player> center,
+    required List<Player> wing,
+    required List<Player> goalie,
+  }) = _Team;
 
-  factory Team.fromJson(Map<String, dynamic> data, TeamColor teamColor) {
+  factory Team.fromJson(Map<String, dynamic> json) => _$TeamFromJson(json);
+
+  /// Parses one team's roster out of the shared Google Apps Script response,
+  /// which nests both teams under their color as key and lists players as
+  /// plain name strings.
+  factory Team.fromGoogleScriptResponse(
+    Map<String, dynamic> data,
+    TeamColor teamColor,
+  ) {
     final team = data[teamColor.name] as Map<String, dynamic>;
 
-    final frontData = team['front'] as List<dynamic>?;
-    final centerData = team['center'] as List<dynamic>?;
-    final wingData = team['wing'] as List<dynamic>?;
-    final goalieData = team['goalie'] as List<dynamic>?;
+    List<Player> playersFor(String position) {
+      final raw = team[position] as List<dynamic>?;
+      return raw?.map((player) => Player.fromString(player as String)).toList() ??
+          <Player>[];
+    }
 
     return Team(
       teamColor: teamColor,
-      front: frontData != null
-          ? frontData
-                .map((player) => Player.fromString(player as String))
-                .toList()
-          : <Player>[],
-      center: centerData != null
-          ? centerData
-                .map((player) => Player.fromString(player as String))
-                .toList()
-          : <Player>[],
-      wing: wingData != null
-          ? wingData
-                .map((player) => Player.fromString(player as String))
-                .toList()
-          : <Player>[],
-      goalie: goalieData != null
-          ? goalieData
-                .map((player) => Player.fromString(player as String))
-                .toList()
-          : <Player>[],
+      front: playersFor('front'),
+      center: playersFor('center'),
+      wing: playersFor('wing'),
+      goalie: playersFor('goalie'),
     );
   }
 }

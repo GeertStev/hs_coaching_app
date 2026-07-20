@@ -1,112 +1,68 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'display_global_settings.freezed.dart';
+part 'display_global_settings.g.dart';
 
 /// Represents the static global settings for a display.
 ///
 /// Path: /clubs/{clubId}/displays/{displayDeviceId}/settings/global
-@immutable
-class DisplayGlobalSettings {
-  final String clubName;
-  final String clubLogoUrl;
-  final String clubWebsite;
-  final int width;
-  final int height;
-  final List<String> features;
-  final DateTime subscriptionEnd;
-  final Color primaryColor;
-  final Color secondaryColor;
-  final Color tertiaryColor;
-  final Color backgroundColor;
+@freezed
+abstract class DisplayGlobalSettings with _$DisplayGlobalSettings {
+  const factory DisplayGlobalSettings({
+    @Default('Club name') String clubName,
+    @Default('') String clubLogoUrl,
+    @Default('www.club.uwh') String clubWebsite,
+    @Default(800) int width,
+    @Default(600) int height,
+    @Default(['main']) List<String> features,
+    @SubscriptionEndConverter() required DateTime subscriptionEnd,
+    @ColorFromHexConverter.blue() required Color primaryColor,
+    @ColorFromHexConverter.green() required Color secondaryColor,
+    @ColorFromHexConverter.amber() required Color tertiaryColor,
+    @ColorFromHexConverter.black() required Color backgroundColor,
+  }) = _DisplayGlobalSettings;
 
-  const DisplayGlobalSettings({
-    required this.clubName,
-    required this.clubLogoUrl,
-    required this.clubWebsite,
-    required this.width,
-    required this.height,
-    required this.features,
-    required this.subscriptionEnd,
-    required this.primaryColor,
-    required this.secondaryColor,
-    required this.tertiaryColor,
-    required this.backgroundColor,
-  });
+  factory DisplayGlobalSettings.fromJson(Map<String, dynamic> json) =>
+      _$DisplayGlobalSettingsFromJson(json);
+}
 
-  /// Creates [GlobalSettings] from a Firestore document map.
-  factory DisplayGlobalSettings.fromMap(Map<String, dynamic> data) {
-    // Helper to parse color from hex string or return a default
-    Color colorFromHex(String? hexColor, Color defaultColor) {
-      if (hexColor == null || hexColor.isEmpty) return defaultColor;
-      final buffer = StringBuffer();
-      if (hexColor.length == 6 || hexColor.length == 7) buffer.write('ff');
-      buffer.write(hexColor.replaceFirst('#', ''));
-      return Color(int.parse(buffer.toString(), radix: 16));
-    }
+/// Adds a 30-day grace period on top of the stored subscription end date.
+class SubscriptionEndConverter implements JsonConverter<DateTime, Object?> {
+  const SubscriptionEndConverter();
 
-    return DisplayGlobalSettings(
-      clubName: data['clubName'] as String? ?? 'Club name',
-      // ToDo Logo dummy
-      clubLogoUrl: data['clubLogoUrl'] as String? ?? '',
-      clubWebsite: data['clubWebsite'] as String? ?? 'www.club.uwh',
-      width: data['width'] as int? ?? 800,
-      height: data['height'] as int? ?? 600,
-      features: List<String>.from(data['features'] as List? ?? ['main']),
-      subscriptionEnd:
-          (data['subscriptionEnd'] as Timestamp? ?? Timestamp.now())
-              .toDate()
-              .add(const Duration(days: 30)),
-      primaryColor: colorFromHex(data['primaryColor'] as String?, Colors.blue),
-      secondaryColor: colorFromHex(
-        data['secondaryColor'] as String?,
-        Colors.green,
-      ),
-      tertiaryColor: colorFromHex(
-        data['tertiaryColor'] as String?,
-        Colors.amber,
-      ),
-      backgroundColor: colorFromHex(
-        data['backgroundColor'] as String?,
-        Colors.black,
-      ),
-    );
+  @override
+  DateTime fromJson(Object? json) {
+    final timestamp = json is Timestamp ? json : Timestamp.now();
+    return timestamp.toDate().add(const Duration(days: 30));
   }
 
   @override
-  String toString() {
-    return 'GlobalSettings(clubName: $clubName, clubLogoUrl: $clubLogoUrl, clubWebsite: $clubWebsite, width: $width, height: $height, features: $features, subscriptionEnd: $subscriptionEnd)';
+  Object toJson(DateTime object) => Timestamp.fromDate(object);
+}
+
+/// Parses a `#RRGGBB` / `#AARRGGBB` hex string into a [Color], falling back
+/// to [defaultColor] when the value is missing or empty.
+class ColorFromHexConverter implements JsonConverter<Color, String?> {
+  const ColorFromHexConverter._(this.defaultColor);
+  const ColorFromHexConverter.blue() : this._(Colors.blue);
+  const ColorFromHexConverter.green() : this._(Colors.green);
+  const ColorFromHexConverter.amber() : this._(Colors.amber);
+  const ColorFromHexConverter.black() : this._(Colors.black);
+
+  final Color defaultColor;
+
+  @override
+  Color fromJson(String? json) {
+    if (json == null || json.isEmpty) return defaultColor;
+    final buffer = StringBuffer();
+    if (json.length == 6 || json.length == 7) buffer.write('ff');
+    buffer.write(json.replaceFirst('#', ''));
+    return Color(int.parse(buffer.toString(), radix: 16));
   }
 
   @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-
-    return other is DisplayGlobalSettings &&
-        other.clubName == clubName &&
-        other.clubLogoUrl == clubLogoUrl &&
-        other.clubWebsite == clubWebsite &&
-        other.width == width &&
-        other.height == height &&
-        listEquals(other.features, features) &&
-        other.subscriptionEnd == subscriptionEnd &&
-        other.primaryColor == primaryColor &&
-        other.secondaryColor == secondaryColor &&
-        other.tertiaryColor == tertiaryColor &&
-        other.backgroundColor == backgroundColor;
-  }
-
-  @override
-  int get hashCode {
-    return clubName.hashCode ^
-        clubLogoUrl.hashCode ^
-        clubWebsite.hashCode ^
-        width.hashCode ^
-        height.hashCode ^
-        features.hashCode ^
-        subscriptionEnd.hashCode ^
-        primaryColor.hashCode ^
-        secondaryColor.hashCode ^
-        tertiaryColor.hashCode ^
-        backgroundColor.hashCode;
-  }
+  String toJson(Color object) =>
+      '#${object.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
 }

@@ -43,7 +43,6 @@ class TeamControlScreen extends ConsumerWidget {
                 textStyle: const TextStyle(fontSize: 16),
               ),
               onPressed: () {
-                // Open de preview dialog wanneer op de knop wordt gedrukt
                 showDialog(
                   context: context,
                   builder: (context) => const TeamPreviewDialog(),
@@ -62,7 +61,7 @@ class TeamControlScreen extends ConsumerWidget {
                 textStyle: const TextStyle(fontSize: 16),
               ),
               onPressed: () =>
-                  ref.read(teamControllerProvider.notifier).triggerTeamUpdate(),
+                  ref.read(teamControllerProvider.notifier).castToScreen(),
             ),
           ],
         ),

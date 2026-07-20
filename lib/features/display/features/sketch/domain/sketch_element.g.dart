@@ -34,6 +34,7 @@ const _$SketchElementTypeEnumMap = {
   SketchElementType.arrow: 'arrow',
   SketchElementType.line: 'line',
   SketchElementType.rectangle: 'rectangle',
+  SketchElementType.polygon: 'polygon',
   SketchElementType.circle: 'circle',
   SketchElementType.icon: 'icon',
 };
@@ -133,6 +134,38 @@ Json? _$JsonConverterToJson<Json, Value>(
   Value? value,
   Json? Function(Value value) toJson,
 ) => value == null ? null : toJson(value);
+
+PolygonElement _$PolygonElementFromJson(Map<String, dynamic> json) =>
+    PolygonElement(
+      id: json['id'] as String,
+      type:
+          $enumDecodeNullable(_$SketchElementTypeEnumMap, json['type']) ??
+          SketchElementType.polygon,
+      color: const ColorConverter().fromJson((json['color'] as num).toInt()),
+      strokeWidth: (json['strokeWidth'] as num).toInt(),
+      points: (json['points'] as List<dynamic>)
+          .map((e) => Point.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      fillColor: _$JsonConverterFromJson<int, Color>(
+        json['fillColor'],
+        const ColorConverter().fromJson,
+      ),
+      $type: json['runtimeType'] as String?,
+    );
+
+Map<String, dynamic> _$PolygonElementToJson(PolygonElement instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'type': _$SketchElementTypeEnumMap[instance.type]!,
+      'color': const ColorConverter().toJson(instance.color),
+      'strokeWidth': instance.strokeWidth,
+      'points': instance.points.map((e) => e.toJson()).toList(),
+      'fillColor': _$JsonConverterToJson<int, Color>(
+        instance.fillColor,
+        const ColorConverter().toJson,
+      ),
+      'runtimeType': instance.$type,
+    };
 
 CircleElement _$CircleElementFromJson(Map<String, dynamic> json) =>
     CircleElement(

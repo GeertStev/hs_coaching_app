@@ -1,87 +1,88 @@
 import 'package:flutter/material.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_providers.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/command.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_canvas.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_painter.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/tool.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/stateless_tool.dart';
+import 'dart:math' as math;
 
-enum _InteractionMode { none, moving, rotating }
-
-class SelectTool implements Tool {
-  // You can adjust the tappable area of the handles here.
-  static const double _rotationHandleHitRadius = 12.0;
+class SelectTool implements StatelessTool {
+  static const double _rotationHandleHitRadius = 24.0;
   static const double _dropdownHandleHitSize = 24.0;
 
-  SketchElement? _selectedElement;
-  SketchElement? _originalElementState; // For undo/redo of transformations
-  Offset? _panStartOffset;
-  _InteractionMode _interactionMode = _InteractionMode.none;
-
   @override
-  void onPanStart(DragStartDetails details, SketchCanvasState state) {
-    _selectedElement = null; // Reset on new pan
-    _interactionMode = _InteractionMode.none;
+  ToolResult onPanStart(
+    Offset localPos,
+    DrawingSessionState state,
+    ToolConfig config,
+  ) {
+    SketchElement? selectedElement;
 
-    //final elements = state.ref.read(sketchElementsStreamProvider).value ?? [];
-    final elements =
-        state.ref
-            .read(sketchElementsStreamProvider(state.widget.sketchId))
-            .value ??
-        [];
-    final selectedId = state.ref.read(selectedElementIdProvider);
-
-    // Check for interaction with an already selected element's handles
-    if (selectedId != null) {
-      SketchElement? selectedElement;
+    if (config.selectedElementId != null) {
       try {
-        selectedElement = elements.firstWhere((e) => e.id == selectedId);
-      } catch (_) {
-        // Element not found
-      }
-      if (selectedElement != null && selectedElement is IconElement) {
+        selectedElement = config.elements.firstWhere(
+          (e) => e.id == config.selectedElementId,
+        );
+      } catch (_) {}
+
+      if (selectedElement is IconElement) {
         final rotationHandle = SketchPainter.getRotationHandle(
           selectedElement,
-          state.widget.actualSize,
-          state.widget.targetSize,
+          config.actualSize,
+          config.targetSize,
         );
-        if ((details.localPosition - rotationHandle).distance <=
-            _rotationHandleHitRadius) {
-          _interactionMode = _InteractionMode.rotating;
-          _selectedElement = selectedElement;
-          _originalElementState =
-              selectedElement; // Store initial state for undo/redo
-          _panStartOffset =
-              details.localPosition; // Use local point for rotation
-          state.setTemporaryElement(_selectedElement);
-          return; // Start rotating
+        if ((localPos - rotationHandle).distance <= _rotationHandleHitRadius) {
+          return ToolResult(
+            state: state.copyWith(
+              interactionMode: 2,
+              temporaryElement: selectedElement,
+              originalElement: selectedElement,
+              panStartOffset: localPos,
+            ),
+          );
         }
       }
     }
-    // If not interacting with a handle, treat it as a move
-    final startPoint = state.transformAndClampOffset(details.localPosition);
-    if (_selectElementAt(startPoint, state)) {
-      _interactionMode = _InteractionMode.moving;
-      _originalElementState = _selectedElement; // Store initial state
-      _panStartOffset = details.localPosition;
-      state.setTemporaryElement(_selectedElement);
+
+    final foundElement = _getElementAt(localPos, config);
+
+    if (foundElement != null) {
+      // Zodra we de selectie opslaan voor de interactie, bepalen we
+      // pas de start-offset (deze moet later wél vergeleken worden,
+      // localPos is hier prima als referentiepunt voor onPanUpdate)
+      return ToolResult(
+        state: state.copyWith(
+          interactionMode: 1, // moving
+          temporaryElement: foundElement,
+          originalElement: foundElement,
+          panStartOffset: localPos,
+        ),
+        selectedElementId: foundElement.id,
+      );
     }
+    return ToolResult(state: state.clear(), clearSelection: true);
   }
 
   @override
-  void onPanUpdate(DragUpdateDetails details, SketchCanvasState state) {
-    if (_selectedElement == null || _panStartOffset == null) return;
+  ToolResult onPanUpdate(
+    Offset localPos,
+    DrawingSessionState state,
+    ToolConfig config,
+  ) {
+    if (state.temporaryElement == null || state.panStartOffset == null) {
+      return ToolResult(state: state);
+    }
 
-    if (_interactionMode == _InteractionMode.moving) {
-      // The delta must be scaled to the target coordinate space
-      final localDelta = details.localPosition - _panStartOffset!;
-      final scaleX =
-          state.widget.targetSize.width / state.widget.actualSize.width;
-      final scaleY =
-          state.widget.targetSize.height / state.widget.actualSize.height;
+    SketchElement updatedElement = state.temporaryElement!;
+    Offset newPanStartOffset = state.panStartOffset!;
+
+    if (state.interactionMode == 1) {
+      // Moving
+      final localDelta = localPos - state.panStartOffset!;
+      final scaleX = config.targetSize.width / config.actualSize.width;
+      final scaleY = config.targetSize.height / config.actualSize.height;
       final delta = Offset(localDelta.dx * scaleX, localDelta.dy * scaleY);
 
-      _selectedElement = _selectedElement!.map(
+      updatedElement = updatedElement.map(
         path: (e) => e.copyWith(
           points: e.points
               .map((p) => p.copyWith(offset: p.offset + delta))
@@ -91,169 +92,144 @@ class SelectTool implements Tool {
         line: (e) => e.copyWith(start: e.start + delta, end: e.end + delta),
         rectangle: (e) =>
             e.copyWith(start: e.start + delta, end: e.end + delta),
+        polygon: (e) => e.copyWith(
+          points: e.points
+              .map((p) => p.copyWith(offset: p.offset + delta))
+              .toList(),
+        ),
         circle: (e) => e.copyWith(center: e.center + delta),
         icon: (e) => e.copyWith(position: e.position + delta),
       );
-      state.setTemporaryElement(_selectedElement);
-      // Update the start offset for the next delta calculation
-      _panStartOffset = details.localPosition;
-    } else if (_interactionMode == _InteractionMode.rotating &&
-        _selectedElement is IconElement) {
-      final icon = _selectedElement as IconElement;
-
-      // Rotation calculations should happen in the local (widget) coordinate space
-      final scaleX =
-          state.widget.actualSize.width / state.widget.targetSize.width;
-      final scaleY =
-          state.widget.actualSize.height / state.widget.targetSize.height;
+      newPanStartOffset = localPos;
+    } else if (state.interactionMode == 2 && updatedElement is IconElement) {
+      // Rotating
+      final icon = updatedElement;
+      final scaleX = config.actualSize.width / config.targetSize.width;
+      final scaleY = config.actualSize.height / config.targetSize.height;
       final localCenter = Offset(
         icon.position.dx * scaleX,
         icon.position.dy * scaleY,
       );
+      final startVector = state.panStartOffset! - localCenter;
+      final currentVector = localPos - localCenter;
 
-      final startVector = _panStartOffset! - localCenter;
-      final currentVector = details.localPosition - localCenter;
-      final angle = currentVector.direction - startVector.direction;
+      double angle = currentVector.direction - startVector.direction;
 
-      _selectedElement = icon.copyWith(rotation: icon.rotation + angle);
-      state.setTemporaryElement(_selectedElement);
-      _panStartOffset = details.localPosition;
+      // Fix voor het plots omklappen door de direction range (-PI tot PI)
+      if (angle > math.pi) angle -= 2 * math.pi;
+      if (angle < -math.pi) angle += 2 * math.pi;
+
+      updatedElement = icon.copyWith(rotation: icon.rotation + angle);
+      newPanStartOffset = localPos;
     }
+
+    return ToolResult(
+      state: DrawingSessionState(
+        temporaryElement: updatedElement,
+        originalElement: state.originalElement,
+        panStartOffset: newPanStartOffset,
+        interactionMode: state.interactionMode,
+      ),
+    );
   }
 
   @override
-  Future<void> onPanEnd(DragEndDetails details, SketchCanvasState state) async {
-    if (_selectedElement != null && _originalElementState != null) {
-      // Only create an update command if the element has actually changed.
-      if (_selectedElement != _originalElementState) {
-        await state.addCommand(
-          UpdateElementCommand(_originalElementState!, _selectedElement!),
+  ToolResult onPanEnd(DrawingSessionState state, ToolConfig config) {
+    Command? cmd;
+    if (state.temporaryElement != null && state.originalElement != null) {
+      if (state.temporaryElement != state.originalElement) {
+        cmd = UpdateElementCommand(
+          state.originalElement!,
+          state.temporaryElement!,
         );
-        // By setting the temporary element to the final state, we prevent a flicker.
-        // The painter will use this version until the stream from the repository updates.
-        // When the stream updates, this temporary element will be identical to the
-        // one in the main list, so the transition is seamless.
-        state.setTemporaryElement(_selectedElement);
-      } else {
-        // If no change, just clear the temporary element.
-        state.clearTemporaryElement();
       }
-    } else {
-      state.clearTemporaryElement();
     }
-    _originalElementState = null;
-    _selectedElement = null;
-    _panStartOffset = null;
-    _interactionMode = _InteractionMode.none;
+    return ToolResult(state: state.clear(), command: cmd);
   }
 
   @override
-  void onTapUp(TapUpDetails details, SketchCanvasState state) {
-    final tappedPoint = state.transformAndClampOffset(details.localPosition);
-    final selectedId = state.ref.read(selectedElementIdProvider);
-
-    if (selectedId == null) {
-      _selectElementAt(tappedPoint, state);
-      return;
-    }
-    //final elements = state.ref.read(sketchElementsStreamProvider).value ?? [];
-    final elements =
-        state.ref
-            .read(sketchElementsStreamProvider(state.widget.sketchId))
-            .value ??
-        [];
+  ToolResult onTapUp(
+    Offset localPos,
+    DrawingSessionState state,
+    ToolConfig config,
+  ) {
+    //final tappedPoint = config.transformAndClamp(localPos);
     SketchElement? selectedElement;
-    try {
-      selectedElement = elements.firstWhere((e) => e.id == selectedId);
-    } catch (_) {
-      // Element not found
-    }
 
-    if (selectedElement == null) {
-      _selectElementAt(tappedPoint, state);
-      return;
+    if (config.selectedElementId != null) {
+      try {
+        selectedElement = config.elements.firstWhere(
+          (e) => e.id == config.selectedElementId,
+        );
+      } catch (_) {}
     }
 
     if (selectedElement is IconElement) {
-      final dropdownHandlePosition = SketchPainter.getDropdownHandle(
+      final dropdownHandle = SketchPainter.getDropdownHandle(
         selectedElement,
-        state.widget.actualSize,
-        state.widget.targetSize,
+        config.actualSize,
+        config.targetSize,
       );
       final handleRect = Rect.fromCenter(
-        center: dropdownHandlePosition,
+        center: dropdownHandle,
         width: _dropdownHandleHitSize,
         height: _dropdownHandleHitSize,
       );
-
-      if (handleRect.contains(details.localPosition)) {
-        _showIconChangeMenu(
-          state.context,
-          details.globalPosition,
-          selectedElement,
-          state,
+      if (handleRect.contains(localPos)) {
+        return ToolResult(
+          state: state.copyWith(
+            iconMenuRequest: IconMenuRequest(selectedElement, localPos),
+          ),
         );
-        return; // Handled tap on dropdown
       }
     }
 
-    _selectElementAt(tappedPoint, state);
-  }
+    final foundElement = _getElementAt(localPos, config);
 
-  bool _selectElementAt(Offset position, SketchCanvasState state) {
-    final selectedElementIdNotifier = state.ref.read(
-      selectedElementIdProvider.notifier,
-    );
-    //final elements = state.ref.read(sketchElementsStreamProvider).value ?? [];
-    final elements =
-        state.ref
-            .read(sketchElementsStreamProvider(state.widget.sketchId))
-            .value ??
-        [];
-
-    for (final element in elements.reversed) {
-      final rect = SketchPainter.getBoundingBox(
-        element,
-        state.widget.actualSize, // Use actual size from widget
-        state.widget.targetSize, // Use target size from widget
+    if (foundElement != null) {
+      // Zodra we de selectie opslaan voor de interactie, bepalen we
+      // pas de start-offset (deze moet later wél vergeleken worden,
+      // localPos is hier prima als referentiepunt voor onPanUpdate)
+      return ToolResult(
+        state: state.copyWith(
+          interactionMode: 1, // moving
+          temporaryElement: foundElement,
+          originalElement: foundElement,
+          panStartOffset: localPos,
+        ),
+        selectedElementId: foundElement.id,
       );
-      if (rect.contains(position)) {
-        selectedElementIdNotifier.select(element.id);
-        _selectedElement = element;
-        return true;
+    }
+    return ToolResult(state: state.clear(), clearSelection: true);
+  }
+
+  SketchElement? _getElementAt(Offset localPoint, ToolConfig config) {
+    // 1. Icoontjes liggen visueel bovenaan, test deze dus eerst (van nieuw naar oud).
+    final icons = config.elements.whereType<IconElement>().toList();
+    for (final el in icons.reversed) {
+      if (SketchPainter.elementHitTest(
+        el,
+        localPoint,
+        config.actualSize,
+        config.targetSize,
+      )) {
+        return el;
       }
     }
 
-    selectedElementIdNotifier.deselect();
-    return false;
-  }
-
-  void _showIconChangeMenu(
-    BuildContext context,
-    Offset globalPosition,
-    IconElement element,
-    SketchCanvasState state,
-  ) async {
-    final newIconId = await showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        globalPosition.dx,
-        globalPosition.dy,
-        globalPosition.dx,
-        globalPosition.dy,
-      ),
-      items: availableIcons.entries.map((entry) {
-        return PopupMenuItem<String>(
-          value: entry.key,
-          child: Center(child: Icon(entry.value)),
-        );
-      }).toList(),
-    );
-    if (newIconId != null && newIconId != element.iconId) {
-      // For a simple icon change, we can bypass the command history for instant feedback,
-      // or create a new UpdateElementCommand. Let's use a command for consistency.
-      final newElement = element.copyWith(iconId: newIconId);
-      await state.addCommand(UpdateElementCommand(element, newElement));
+    // 2. Test daarna de overige elementen (lijnen, rechthoeken, enz. - van nieuw naar oud)
+    final nonIcons = config.elements.where((e) => e is! IconElement).toList();
+    for (final el in nonIcons.reversed) {
+      if (SketchPainter.elementHitTest(
+        el,
+        localPoint,
+        config.actualSize,
+        config.targetSize,
+      )) {
+        return el;
+      }
     }
+
+    return null;
   }
 }

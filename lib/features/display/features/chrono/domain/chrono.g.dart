@@ -18,6 +18,11 @@ _Chrono _$ChronoFromJson(Map<String, dynamic> json) => _Chrono(
   ),
   accumulatedElapsedMillis:
       (json['accumulatedElapsedMillis'] as num?)?.toInt() ?? 0,
+  laps:
+      (json['laps'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt())
+          .toList() ??
+      const [],
 );
 
 Map<String, dynamic> _$ChronoToJson(_Chrono instance) => <String, dynamic>{
@@ -27,6 +32,7 @@ Map<String, dynamic> _$ChronoToJson(_Chrono instance) => <String, dynamic>{
     instance.serverWriteTimestamp,
   ),
   'accumulatedElapsedMillis': instance.accumulatedElapsedMillis,
+  'laps': instance.laps,
 };
 
 const _$ChronoStatusEnumMap = {

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+/*import 'package:flutter/material.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_canvas.dart';
 
 /// The interface for a tool that can be used on the sketch canvas.
@@ -18,3 +18,4 @@ abstract class Tool {
   /// Called when the user taps up on the canvas.
   void onTapUp(TapUpDetails details, SketchCanvasState state);
 }
+*/

@@ -51,8 +51,8 @@ class DisplayImageRepository {
         .collection('images')
         .withConverter<DisplayImage>(
           fromFirestore: (snapshot, _) =>
-              DisplayImage.fromMap(snapshot.data()!).copyWith(id: snapshot.id),
-          toFirestore: (image, _) => image.toMap(),
+              DisplayImage.fromJson(snapshot.data()!).copyWith(id: snapshot.id),
+          toFirestore: (image, _) => image.toJson(),
         );
   }
 

@@ -29,7 +29,7 @@ class ContentEditDialog extends ConsumerStatefulWidget {
   const ContentEditDialog({
     super.key,
     required this.dialogTitle,
-    required this.contentSpecificWidget,
+    this.contentSpecificWidget,
     required this.allTags,
     this.initialTitle = '',
     this.initialDescription = '',
@@ -44,7 +44,7 @@ class ContentEditDialog extends ConsumerStatefulWidget {
   final String initialDescription;
   final List<String> initialTags;
   final List<String> allTags;
-  final Widget contentSpecificWidget;
+  final Widget? contentSpecificWidget;
   final bool isNewItem;
   final bool showSecondaryAction;
   final Future<bool> Function(ContentEditDialogResult?)? onWillPop;
@@ -146,7 +146,9 @@ class _ContentEditDialogState extends ConsumerState<ContentEditDialog> {
                 onTagsChanged: (updatedTags) => _tags = updatedTags,
               ),
               const SizedBox(height: 16),
-              widget.contentSpecificWidget,
+              //widget.contentSpecificWidget,
+              if (widget.contentSpecificWidget != null)
+                widget.contentSpecificWidget!, // <-- Voeg null-check toe
             ],
           ),
         ),

@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/stateless_tool.dart';
+import 'package:uuid/uuid.dart';
 import 'package:hs_coaching_app/features/display/data/display_global_settings_repository.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_providers.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_data_providers.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_ui_providers.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_service_providers.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/data/drawing_session_provider.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/command.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_painter.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/arrow_tool.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/circle_tool.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/eraser_tool.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/freehand_tool.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/line_tool.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/rectangle_tool.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/select_tool.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/tool.dart';
-import 'package:uuid/uuid.dart';
 
 class SketchCanvas extends ConsumerStatefulWidget {
   const SketchCanvas({
@@ -33,125 +29,38 @@ class SketchCanvas extends ConsumerStatefulWidget {
   ConsumerState<SketchCanvas> createState() => _SketchCanvasState();
 }
 
-// The public interface for the Tool classes to interact with the canvas state.
-// This prevents tools from having to depend on the full `_SketchCanvasState`.
-abstract class SketchCanvasState {
-  WidgetRef get ref;
-  SketchCanvas get widget;
-  BuildContext get context;
-  Uuid get uuid;
-
-  Offset transformAndClampOffset(Offset localOffset);
-  void setTemporaryElement(SketchElement? element);
-  void clearTemporaryElement();
-  Future<void> addCommand(Command command);
-}
-
-class _SketchCanvasState extends ConsumerState<SketchCanvas>
-    implements SketchCanvasState {
+class _SketchCanvasState extends ConsumerState<SketchCanvas> {
   final _canvasKey = GlobalKey();
-  @override
-  final uuid = const Uuid();
+  final _uuid = const Uuid();
 
-  // State for the background image
-  ImageProvider? _backgroundImageProvider;
-  ui.Image? _backgroundImage;
+  Future<void> _showIconMenu(IconMenuRequest req) async {
+    final renderBox =
+        _canvasKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
 
-  // By creating instances of the tools here, we ensure that their internal
-  // state (like the element being drawn) is preserved across pan events.
-  late final Map<DrawingTool, Tool> _tools;
-
-  @override
-  void initState() {
-    super.initState();
-    _tools = {
-      DrawingTool.freehand: FreehandTool(),
-      DrawingTool.arrow: ArrowTool(),
-      DrawingTool.line: LineTool(),
-      DrawingTool.rectangle: RectangleTool(),
-      DrawingTool.circle: CircleTool(),
-      DrawingTool.eraser: EraserTool(),
-      DrawingTool.select: SelectTool(),
-    };
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _updateBackgroundImage();
-  }
-
-  @override
-  void didUpdateWidget(covariant SketchCanvas oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.backgroundUrl != oldWidget.backgroundUrl) {
-      _updateBackgroundImage();
-    }
-  }
-
-  void _updateBackgroundImage() {
-    if (widget.backgroundUrl == null) {
-      if (_backgroundImage != null) {
-        setState(() => _backgroundImage = null);
-      }
-      return;
-    }
-
-    _backgroundImageProvider = NetworkImage(widget.backgroundUrl!);
-    final imageStream = _backgroundImageProvider!.resolve(
-      createLocalImageConfiguration(context),
+    final globalPos = renderBox.localToGlobal(req.localPosition);
+    final newIconId = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        globalPos.dx,
+        globalPos.dy,
+        globalPos.dx,
+        globalPos.dy,
+      ),
+      items: availableIcons.entries.map((entry) {
+        return PopupMenuItem<String>(
+          value: entry.key,
+          child: Center(child: Icon(entry.value)),
+        );
+      }).toList(),
     );
-    imageStream.addListener(
-      ImageStreamListener((imageInfo, _) {
-        if (mounted) setState(() => _backgroundImage = imageInfo.image);
-      }),
-    );
-  }
 
-  SketchElement? _temporaryElement;
-
-  /// Transforms a local offset on the widget to the target screen's coordinate system and clamps it.
-  @override
-  Offset transformAndClampOffset(Offset localOffset) {
-    if (widget.actualSize.isEmpty || widget.targetSize.isEmpty) {
-      return localOffset;
+    if (newIconId != null && newIconId != req.element.iconId) {
+      final newElement = req.element.copyWith(iconId: newIconId);
+      ref
+          .read(commandHistoryProvider(widget.sketchId).notifier)
+          .execute(UpdateElementCommand(req.element, newElement));
     }
-
-    final scaleX = widget.targetSize.width / widget.actualSize.width;
-    final scaleY = widget.targetSize.height / widget.actualSize.height;
-
-    final transformedDx = localOffset.dx * scaleX;
-    final transformedDy = localOffset.dy * scaleY;
-
-    // Clamp to ensure it's within the target screen bounds
-    final clampedDx = transformedDx.clamp(0.0, widget.targetSize.width);
-    final clampedDy = transformedDy.clamp(0.0, widget.targetSize.height);
-
-    return Offset(clampedDx, clampedDy);
-  }
-
-  @override
-  void setTemporaryElement(SketchElement? element) {
-    setState(() => _temporaryElement = element);
-  }
-
-  @override
-  void clearTemporaryElement() {
-    setState(() => _temporaryElement = null);
-  }
-
-  @override
-  Future<void> addCommand(Command command) async {
-    // Geef de ID door aan de geschiedenis
-    await ref
-        .read(commandHistoryProvider.notifier)
-        .execute(command, widget.sketchId);
-  }
-
-  Tool get _activeTool {
-    final tool = ref.watch(activeToolProvider);
-    // Return the cached tool instance.
-    return _tools[tool]!;
   }
 
   @override
@@ -160,58 +69,114 @@ class _SketchCanvasState extends ConsumerState<SketchCanvas>
       sketchElementsStreamProvider(widget.sketchId),
     );
     final selectedElementId = ref.watch(selectedElementIdProvider);
+    final sessionState = ref.watch(drawingSessionProvider);
     final settings = ref.read(globalSettingsProvider).value;
+    final sessionNotifier = ref.read(drawingSessionProvider.notifier);
+
+    ref.listen(drawingSessionProvider, (prev, next) {
+      if (next.iconMenuRequest != null) {
+        _showIconMenu(next.iconMenuRequest!);
+        sessionNotifier.clearIconMenuRequest();
+      }
+    });
 
     return DragTarget<String>(
       onAcceptWithDetails: (details) {
-        // The `details.offset` is a global position. We need to convert it to
-        // the local coordinate system of the canvas.
-        final RenderBox renderBox =
+        final renderBox =
             _canvasKey.currentContext?.findRenderObject() as RenderBox;
-        final transformedPosition = transformAndClampOffset(
-          //Translate because of sizebox around icon
-          renderBox.globalToLocal(details.offset.translate(24, 24)),
+        final localOffset = renderBox.globalToLocal(
+          details.offset.translate(24, 24),
         );
 
-        const iconSize = 48.0;
-        final newIcon = IconElement(
-          id: uuid.v4(),
-          iconId: details.data,
-          position: transformedPosition, // Already transformed
-          size: iconSize,
+        // Inline transform mapping
+        final scaleX = widget.targetSize.width / widget.actualSize.width;
+        final scaleY = widget.targetSize.height / widget.actualSize.height;
+        final transformedPosition = Offset(
+          (localOffset.dx * scaleX).clamp(0.0, widget.targetSize.width),
+          (localOffset.dy * scaleY).clamp(0.0, widget.targetSize.height),
         );
-        addCommand(AddElementCommand(newIcon));
+
+        final newIcon = IconElement(
+          id: _uuid.v4(),
+          iconId: details.data,
+          position: transformedPosition,
+          size: 48.0,
+        );
+        ref
+            .read(commandHistoryProvider(widget.sketchId).notifier)
+            .execute(AddElementCommand(newIcon));
       },
       builder: (context, candidateData, rejectedData) {
         final elements = elementsAsync.value ?? [];
         final currentElements = [
-          _temporaryElement,
+          sessionState.temporaryElement,
         ].whereType<SketchElement>().toList();
 
         return GestureDetector(
           key: _canvasKey,
-          onPanStart: (details) => _activeTool.onPanStart(details, this),
-          onPanUpdate: (details) => _activeTool.onPanUpdate(details, this),
-          onPanEnd: (details) => _activeTool.onPanEnd(details, this),
-          onTapUp: (details) => _activeTool.onTapUp(details, this),
+          onPanStart: (details) => sessionNotifier.onPanStart(
+            widget.sketchId,
+            details.localPosition,
+            widget.actualSize,
+            widget.targetSize,
+          ),
+          onPanUpdate: (details) => sessionNotifier.onPanUpdate(
+            widget.sketchId,
+            details.localPosition,
+            widget.actualSize,
+            widget.targetSize,
+          ),
+          onPanEnd: (details) => sessionNotifier.onPanEnd(
+            widget.sketchId,
+            widget.actualSize,
+            widget.targetSize,
+          ),
+          onTapUp: (details) => sessionNotifier.onTapUp(
+            widget.sketchId,
+            details.localPosition,
+            widget.actualSize,
+            widget.targetSize,
+          ),
           child: Container(
             color: settings?.backgroundColor ?? Colors.white,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white30,
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: CustomPaint(
-                painter: SketchPainter(
-                  elements: elements,
-                  currentElements: currentElements,
-                  selectedElementId: selectedElementId,
-                  actualSize: widget.actualSize,
-                  targetSize: widget.targetSize,
-                  backgroundImage: _backgroundImage,
+            child: Stack(
+              children: [
+                // 1. De SVG Achtergrond (Geregeld door flutter_svg's netwerk widget)
+                if (widget.backgroundUrl != null &&
+                    widget.backgroundUrl!.trim().isNotEmpty)
+                  Positioned.fill(
+                    child: SvgPicture.network(
+                      widget.backgroundUrl!,
+                      fit: BoxFit
+                          .fill, // Zorgt dat de SVG precies de canvas dimensies vult
+                      placeholderBuilder: (context) =>
+                          const Center(child: CircularProgressIndicator()),
+                      // Voorkom caching-issues bij snelle opeenvolgende wisselingen
+                      key: ValueKey(widget.backgroundUrl),
+                    ),
+                  ),
+
+                // 2. Het Transparante Teken-canvas erbovenop
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors
+                          .transparent, // Belangrijk: Transparant zodat de SVG erdoorheen schijnt!
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: CustomPaint(
+                      painter: SketchPainter(
+                        elements: elements,
+                        currentElements: currentElements,
+                        selectedElementId: selectedElementId,
+                        actualSize: widget.actualSize,
+                        targetSize: widget.targetSize,
+                      ),
+                      size: Size.infinite,
+                    ),
+                  ),
                 ),
-                size: Size.infinite,
-              ),
+              ],
             ),
           ),
         );

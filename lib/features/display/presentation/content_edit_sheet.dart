@@ -7,7 +7,7 @@ class ContentEditSheet extends ConsumerStatefulWidget {
   const ContentEditSheet({
     super.key,
     required this.dialogTitle,
-    required this.contentSpecificWidget,
+    this.contentSpecificWidget,
     required this.allTags,
     this.initialTitle = '',
     this.initialDescription = '',
@@ -21,7 +21,7 @@ class ContentEditSheet extends ConsumerStatefulWidget {
   final String initialDescription;
   final List<String> initialTags;
   final List<String> allTags;
-  final Widget contentSpecificWidget;
+  final Widget? contentSpecificWidget;
   final bool isNewItem;
   final bool showSecondaryAction;
 
@@ -131,7 +131,9 @@ class _ContentEditSheetState extends ConsumerState<ContentEditSheet> {
                       onTagsChanged: (updatedTags) => _tags = updatedTags,
                     ),
                     const SizedBox(height: 16),
-                    widget.contentSpecificWidget,
+                    //widget.contentSpecificWidget,
+                    if (widget.contentSpecificWidget != null)
+                      widget.contentSpecificWidget!, // <-- Voeg null-check toe
                   ],
                 ),
               ),

@@ -31,6 +31,10 @@ SketchElement _$SketchElementFromJson(
           return RectangleElement.fromJson(
             json
           );
+                case 'polygon':
+          return PolygonElement.fromJson(
+            json
+          );
                 case 'circle':
           return CircleElement.fromJson(
             json
@@ -129,14 +133,15 @@ extension SketchElementPatterns on SketchElement {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( PathElement value)?  path,TResult Function( ArrowElement value)?  arrow,TResult Function( LineElement value)?  line,TResult Function( RectangleElement value)?  rectangle,TResult Function( CircleElement value)?  circle,TResult Function( IconElement value)?  icon,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( PathElement value)?  path,TResult Function( ArrowElement value)?  arrow,TResult Function( LineElement value)?  line,TResult Function( RectangleElement value)?  rectangle,TResult Function( PolygonElement value)?  polygon,TResult Function( CircleElement value)?  circle,TResult Function( IconElement value)?  icon,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case PathElement() when path != null:
 return path(_that);case ArrowElement() when arrow != null:
 return arrow(_that);case LineElement() when line != null:
 return line(_that);case RectangleElement() when rectangle != null:
-return rectangle(_that);case CircleElement() when circle != null:
+return rectangle(_that);case PolygonElement() when polygon != null:
+return polygon(_that);case CircleElement() when circle != null:
 return circle(_that);case IconElement() when icon != null:
 return icon(_that);case _:
   return orElse();
@@ -156,14 +161,15 @@ return icon(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( PathElement value)  path,required TResult Function( ArrowElement value)  arrow,required TResult Function( LineElement value)  line,required TResult Function( RectangleElement value)  rectangle,required TResult Function( CircleElement value)  circle,required TResult Function( IconElement value)  icon,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( PathElement value)  path,required TResult Function( ArrowElement value)  arrow,required TResult Function( LineElement value)  line,required TResult Function( RectangleElement value)  rectangle,required TResult Function( PolygonElement value)  polygon,required TResult Function( CircleElement value)  circle,required TResult Function( IconElement value)  icon,}){
 final _that = this;
 switch (_that) {
 case PathElement():
 return path(_that);case ArrowElement():
 return arrow(_that);case LineElement():
 return line(_that);case RectangleElement():
-return rectangle(_that);case CircleElement():
+return rectangle(_that);case PolygonElement():
+return polygon(_that);case CircleElement():
 return circle(_that);case IconElement():
 return icon(_that);}
 }
@@ -179,14 +185,15 @@ return icon(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( PathElement value)?  path,TResult? Function( ArrowElement value)?  arrow,TResult? Function( LineElement value)?  line,TResult? Function( RectangleElement value)?  rectangle,TResult? Function( CircleElement value)?  circle,TResult? Function( IconElement value)?  icon,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( PathElement value)?  path,TResult? Function( ArrowElement value)?  arrow,TResult? Function( LineElement value)?  line,TResult? Function( RectangleElement value)?  rectangle,TResult? Function( PolygonElement value)?  polygon,TResult? Function( CircleElement value)?  circle,TResult? Function( IconElement value)?  icon,}){
 final _that = this;
 switch (_that) {
 case PathElement() when path != null:
 return path(_that);case ArrowElement() when arrow != null:
 return arrow(_that);case LineElement() when line != null:
 return line(_that);case RectangleElement() when rectangle != null:
-return rectangle(_that);case CircleElement() when circle != null:
+return rectangle(_that);case PolygonElement() when polygon != null:
+return polygon(_that);case CircleElement() when circle != null:
 return circle(_that);case IconElement() when icon != null:
 return icon(_that);case _:
   return null;
@@ -205,13 +212,14 @@ return icon(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth,  List<Point> points)?  path,TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end)?  arrow,TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end)?  line,TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end, @ColorConverter()  Color? fillColor)?  rectangle,TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset center,  double radius, @ColorConverter()  Color? fillColor)?  circle,TResult Function( String id,  SketchElementType type, @OffsetConverter()  Offset position,  String iconId,  double size,  double rotation)?  icon,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth,  List<Point> points)?  path,TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end)?  arrow,TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end)?  line,TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end, @ColorConverter()  Color? fillColor)?  rectangle,TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth,  List<Point> points, @ColorConverter()  Color? fillColor)?  polygon,TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset center,  double radius, @ColorConverter()  Color? fillColor)?  circle,TResult Function( String id,  SketchElementType type, @OffsetConverter()  Offset position,  String iconId,  double size,  double rotation)?  icon,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case PathElement() when path != null:
 return path(_that.id,_that.type,_that.color,_that.strokeWidth,_that.points);case ArrowElement() when arrow != null:
 return arrow(_that.id,_that.type,_that.color,_that.strokeWidth,_that.start,_that.end);case LineElement() when line != null:
 return line(_that.id,_that.type,_that.color,_that.strokeWidth,_that.start,_that.end);case RectangleElement() when rectangle != null:
-return rectangle(_that.id,_that.type,_that.color,_that.strokeWidth,_that.start,_that.end,_that.fillColor);case CircleElement() when circle != null:
+return rectangle(_that.id,_that.type,_that.color,_that.strokeWidth,_that.start,_that.end,_that.fillColor);case PolygonElement() when polygon != null:
+return polygon(_that.id,_that.type,_that.color,_that.strokeWidth,_that.points,_that.fillColor);case CircleElement() when circle != null:
 return circle(_that.id,_that.type,_that.color,_that.strokeWidth,_that.center,_that.radius,_that.fillColor);case IconElement() when icon != null:
 return icon(_that.id,_that.type,_that.position,_that.iconId,_that.size,_that.rotation);case _:
   return orElse();
@@ -231,13 +239,14 @@ return icon(_that.id,_that.type,_that.position,_that.iconId,_that.size,_that.rot
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth,  List<Point> points)  path,required TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end)  arrow,required TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end)  line,required TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end, @ColorConverter()  Color? fillColor)  rectangle,required TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset center,  double radius, @ColorConverter()  Color? fillColor)  circle,required TResult Function( String id,  SketchElementType type, @OffsetConverter()  Offset position,  String iconId,  double size,  double rotation)  icon,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth,  List<Point> points)  path,required TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end)  arrow,required TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end)  line,required TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end, @ColorConverter()  Color? fillColor)  rectangle,required TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth,  List<Point> points, @ColorConverter()  Color? fillColor)  polygon,required TResult Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset center,  double radius, @ColorConverter()  Color? fillColor)  circle,required TResult Function( String id,  SketchElementType type, @OffsetConverter()  Offset position,  String iconId,  double size,  double rotation)  icon,}) {final _that = this;
 switch (_that) {
 case PathElement():
 return path(_that.id,_that.type,_that.color,_that.strokeWidth,_that.points);case ArrowElement():
 return arrow(_that.id,_that.type,_that.color,_that.strokeWidth,_that.start,_that.end);case LineElement():
 return line(_that.id,_that.type,_that.color,_that.strokeWidth,_that.start,_that.end);case RectangleElement():
-return rectangle(_that.id,_that.type,_that.color,_that.strokeWidth,_that.start,_that.end,_that.fillColor);case CircleElement():
+return rectangle(_that.id,_that.type,_that.color,_that.strokeWidth,_that.start,_that.end,_that.fillColor);case PolygonElement():
+return polygon(_that.id,_that.type,_that.color,_that.strokeWidth,_that.points,_that.fillColor);case CircleElement():
 return circle(_that.id,_that.type,_that.color,_that.strokeWidth,_that.center,_that.radius,_that.fillColor);case IconElement():
 return icon(_that.id,_that.type,_that.position,_that.iconId,_that.size,_that.rotation);}
 }
@@ -253,13 +262,14 @@ return icon(_that.id,_that.type,_that.position,_that.iconId,_that.size,_that.rot
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth,  List<Point> points)?  path,TResult? Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end)?  arrow,TResult? Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end)?  line,TResult? Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end, @ColorConverter()  Color? fillColor)?  rectangle,TResult? Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset center,  double radius, @ColorConverter()  Color? fillColor)?  circle,TResult? Function( String id,  SketchElementType type, @OffsetConverter()  Offset position,  String iconId,  double size,  double rotation)?  icon,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth,  List<Point> points)?  path,TResult? Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end)?  arrow,TResult? Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end)?  line,TResult? Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset start, @OffsetConverter()  Offset end, @ColorConverter()  Color? fillColor)?  rectangle,TResult? Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth,  List<Point> points, @ColorConverter()  Color? fillColor)?  polygon,TResult? Function( String id,  SketchElementType type, @ColorConverter()  Color color,  int strokeWidth, @OffsetConverter()  Offset center,  double radius, @ColorConverter()  Color? fillColor)?  circle,TResult? Function( String id,  SketchElementType type, @OffsetConverter()  Offset position,  String iconId,  double size,  double rotation)?  icon,}) {final _that = this;
 switch (_that) {
 case PathElement() when path != null:
 return path(_that.id,_that.type,_that.color,_that.strokeWidth,_that.points);case ArrowElement() when arrow != null:
 return arrow(_that.id,_that.type,_that.color,_that.strokeWidth,_that.start,_that.end);case LineElement() when line != null:
 return line(_that.id,_that.type,_that.color,_that.strokeWidth,_that.start,_that.end);case RectangleElement() when rectangle != null:
-return rectangle(_that.id,_that.type,_that.color,_that.strokeWidth,_that.start,_that.end,_that.fillColor);case CircleElement() when circle != null:
+return rectangle(_that.id,_that.type,_that.color,_that.strokeWidth,_that.start,_that.end,_that.fillColor);case PolygonElement() when polygon != null:
+return polygon(_that.id,_that.type,_that.color,_that.strokeWidth,_that.points,_that.fillColor);case CircleElement() when circle != null:
 return circle(_that.id,_that.type,_that.color,_that.strokeWidth,_that.center,_that.radius,_that.fillColor);case IconElement() when icon != null:
 return icon(_that.id,_that.type,_that.position,_that.iconId,_that.size,_that.rotation);case _:
   return null;
@@ -600,6 +610,96 @@ as Color,strokeWidth: null == strokeWidth ? _self.strokeWidth : strokeWidth // i
 as int,start: null == start ? _self.start : start // ignore: cast_nullable_to_non_nullable
 as Offset,end: null == end ? _self.end : end // ignore: cast_nullable_to_non_nullable
 as Offset,fillColor: freezed == fillColor ? _self.fillColor : fillColor // ignore: cast_nullable_to_non_nullable
+as Color?,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+@JsonSerializable(explicitToJson: true)
+class PolygonElement extends SketchElement {
+  const PolygonElement({required this.id, this.type = SketchElementType.polygon, @ColorConverter() required this.color, required this.strokeWidth, required final  List<Point> points, @ColorConverter() this.fillColor, final  String? $type}): _points = points,$type = $type ?? 'polygon',super._();
+  factory PolygonElement.fromJson(Map<String, dynamic> json) => _$PolygonElementFromJson(json);
+
+@override final  String id;
+@override@JsonKey() final  SketchElementType type;
+@ColorConverter() final  Color color;
+ final  int strokeWidth;
+ final  List<Point> _points;
+ List<Point> get points {
+  if (_points is EqualUnmodifiableListView) return _points;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_points);
+}
+
+// De hoekpunten van de veelhoek
+@ColorConverter() final  Color? fillColor;
+
+@JsonKey(name: 'runtimeType')
+final String $type;
+
+
+/// Create a copy of SketchElement
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$PolygonElementCopyWith<PolygonElement> get copyWith => _$PolygonElementCopyWithImpl<PolygonElement>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$PolygonElementToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PolygonElement&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.color, color) || other.color == color)&&(identical(other.strokeWidth, strokeWidth) || other.strokeWidth == strokeWidth)&&const DeepCollectionEquality().equals(other._points, _points)&&(identical(other.fillColor, fillColor) || other.fillColor == fillColor));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,type,color,strokeWidth,const DeepCollectionEquality().hash(_points),fillColor);
+
+@override
+String toString() {
+  return 'SketchElement.polygon(id: $id, type: $type, color: $color, strokeWidth: $strokeWidth, points: $points, fillColor: $fillColor)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $PolygonElementCopyWith<$Res> implements $SketchElementCopyWith<$Res> {
+  factory $PolygonElementCopyWith(PolygonElement value, $Res Function(PolygonElement) _then) = _$PolygonElementCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, SketchElementType type,@ColorConverter() Color color, int strokeWidth, List<Point> points,@ColorConverter() Color? fillColor
+});
+
+
+
+
+}
+/// @nodoc
+class _$PolygonElementCopyWithImpl<$Res>
+    implements $PolygonElementCopyWith<$Res> {
+  _$PolygonElementCopyWithImpl(this._self, this._then);
+
+  final PolygonElement _self;
+  final $Res Function(PolygonElement) _then;
+
+/// Create a copy of SketchElement
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? color = null,Object? strokeWidth = null,Object? points = null,Object? fillColor = freezed,}) {
+  return _then(PolygonElement(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as SketchElementType,color: null == color ? _self.color : color // ignore: cast_nullable_to_non_nullable
+as Color,strokeWidth: null == strokeWidth ? _self.strokeWidth : strokeWidth // ignore: cast_nullable_to_non_nullable
+as int,points: null == points ? _self._points : points // ignore: cast_nullable_to_non_nullable
+as List<Point>,fillColor: freezed == fillColor ? _self.fillColor : fillColor // ignore: cast_nullable_to_non_nullable
 as Color?,
   ));
 }

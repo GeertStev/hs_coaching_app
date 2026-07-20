@@ -12,6 +12,7 @@ class TeamController extends AsyncNotifier<void> {
     // Geen initiële state nodig
   }
 
+  /*
   /// Triggert enkel een verversing van de team data
   Future<void> triggerTeamUpdate() async {
     state = const AsyncLoading();
@@ -20,6 +21,7 @@ class TeamController extends AsyncNotifier<void> {
       await repository.triggerTeamUpdate();
     });
   }
+  */
 
   /// Triggert een verversing en zet de weergave actief op het scherm
   Future<void> castToScreen() async {

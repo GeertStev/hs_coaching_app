@@ -1,11 +1,12 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/domain/i_sketch_repository.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_background.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
 
-class SketchRepository {
+class SketchRepository implements ISketchRepository {
   SketchRepository({
     required FirebaseFirestore firestore,
     required FirebaseStorage storage,
@@ -21,7 +22,6 @@ class SketchRepository {
   final String _clubId;
   final String _displayId;
 
-  /// Returns a reference to the 'sketches' collection for a specific display.
   CollectionReference<Sketch> _sketchesRef() {
     return _firestore
         .collection('clubs')
@@ -31,9 +31,16 @@ class SketchRepository {
         .collection('sketches')
         .withConverter<Sketch>(
           fromFirestore: (snapshot, _) =>
-              Sketch.fromJson(snapshot.data()!).copyWith(id: snapshot.id),
+              Sketch.fromJson(_normalizeLegacyName(snapshot.data()!))
+                  .copyWith(id: snapshot.id),
           toFirestore: (sketch, _) => sketch.toJson(),
         );
+  }
+
+  /// Older documents stored the title under `name` instead of `title`.
+  static Map<String, dynamic> _normalizeLegacyName(Map<String, dynamic> data) {
+    if (data['title'] != null || data['name'] == null) return data;
+    return {...data, 'title': data['name']};
   }
 
   DocumentReference _currentSketchSettingsRef() {
@@ -62,31 +69,27 @@ class SketchRepository {
         );
   }
 
+  @override
   Stream<List<SketchElement>> getSketchElements(String sketchId) {
     return _elementsRef(sketchId).snapshots().map(
       (snapshot) => snapshot.docs.map((doc) => doc.data()).toList(),
     );
   }
 
+  @override
   Future<void> addOrUpdateElement(
     String sketchId,
     SketchElement element,
   ) async {
-    try {
-      await _elementsRef(sketchId).doc(element.id).set(element);
-    } catch (e) {
-      rethrow;
-    }
+    await _elementsRef(sketchId).doc(element.id).set(element);
   }
 
+  @override
   Future<void> removeElement(String sketchId, String elementId) async {
-    try {
-      await _elementsRef(sketchId).doc(elementId).delete();
-    } catch (e) {
-      rethrow;
-    }
+    await _elementsRef(sketchId).doc(elementId).delete();
   }
 
+  @override
   Future<void> clearSketch(String sketchId) async {
     final snapshot = await _elementsRef(sketchId).get();
     for (final doc in snapshot.docs) {
@@ -94,6 +97,7 @@ class SketchRepository {
     }
   }
 
+  @override
   Stream<List<Sketch>> watchAllActiveSketches({String? tag}) {
     Query<Sketch> query = _sketchesRef().where(
       'status',
@@ -110,6 +114,7 @@ class SketchRepository {
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
+  @override
   Stream<Sketch> watchSketch(String sketchId) {
     return _sketchesRef()
         .doc(sketchId)
@@ -117,7 +122,7 @@ class SketchRepository {
         .map((snapshot) => snapshot.data()!);
   }
 
-  // De userId wordt nu netjes via de UI/Controller/Notifier meegegeven!
+  @override
   Future<String> createSketch({
     required String title,
     required String userId,
@@ -153,6 +158,7 @@ class SketchRepository {
     return newSketchDocRef.id;
   }
 
+  @override
   Future<void> updateSketch({
     required String id,
     required String title,
@@ -180,6 +186,7 @@ class SketchRepository {
     await batch.commit();
   }
 
+  @override
   Future<void> archiveSketch(String sketchId) async {
     await _sketchesRef().doc(sketchId).update({
       'status': SketchStatus.archived.name,
@@ -187,55 +194,61 @@ class SketchRepository {
 
     final currentSketchDoc = await _currentSketchSettingsRef().get();
     if (currentSketchDoc.exists &&
-        (currentSketchDoc.data() as Map<String, dynamic>)['currentId'] ==
+        (currentSketchDoc.data() as Map<String, dynamic>?)?['currentId'] ==
             sketchId) {
       await clearCurrentSketch();
     }
   }
 
+  @override
   Future<void> unarchiveSketch(String sketchId) async {
     await _sketchesRef().doc(sketchId).update({
       'status': SketchStatus.active.name,
     });
   }
 
+  @override
   Future<void> hardDeleteSketch(String sketchId) async {
-    try {
-      final elementsQuery = _elementsRef(sketchId);
-      final elementsSnapshot = await elementsQuery.get();
+    final elementsQuery = _elementsRef(sketchId);
+    final elementsSnapshot = await elementsQuery.get();
 
-      final batch = _firestore.batch();
-      for (final doc in elementsSnapshot.docs) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
-
-      await _sketchesRef().doc(sketchId).delete();
-    } catch (e) {
-      rethrow;
+    final batch = _firestore.batch();
+    for (final doc in elementsSnapshot.docs) {
+      batch.delete(doc.reference);
     }
+    await batch.commit();
+
+    await _sketchesRef().doc(sketchId).delete();
   }
 
+  @override
   Future<void> updateSketchTimestamp(String sketchId) {
     return _sketchesRef().doc(sketchId).update({
       'lastModified': FieldValue.serverTimestamp(),
     });
   }
 
-  Stream<DocumentSnapshot> watchCurrentSketchIdDoc() {
-    return _currentSketchSettingsRef().snapshots();
+  @override
+  Stream<String?> watchCurrentSketchId() {
+    return _currentSketchSettingsRef().snapshots().map((snapshot) {
+      final data = snapshot.data() as Map<String, dynamic>?;
+      return data?['currentId'] as String?;
+    });
   }
 
+  @override
   Future<void> setCurrentSketchId(String? sketchId) async {
     await _currentSketchSettingsRef().set({
       'currentId': sketchId,
     }, SetOptions(merge: true));
   }
 
+  @override
   Future<void> clearCurrentSketch() async {
     await setCurrentSketchId(null);
   }
 
+  @override
   Future<void> addSketchBackground({
     required File imageFile,
     required String title,
@@ -252,10 +265,20 @@ class SketchRepository {
 
     final newBackground = SketchBackground(title: title, url: downloadUrl);
     await _currentSketchSettingsRef().set({
-      'backgrounds': FieldValue.arrayUnion([newBackground.toMap()]),
+      'backgrounds': FieldValue.arrayUnion([newBackground.toJson()]),
     }, SetOptions(merge: true));
   }
 
+  @override
+  Future<void> updateSketchBackground(String id, String? backgroundUrl) async {
+    await _sketchesRef().doc(id).update({
+      // Als backgroundUrl null is, schrijf dit expliciet als null weg in Firestore
+      'backgroundUrl': backgroundUrl ?? FieldValue.delete(),
+      'lastModified': FieldValue.serverTimestamp(),
+    });
+  }
+
+  @override
   Stream<List<String>> watchAllSketchTags() {
     return _currentSketchSettingsRef().snapshots().map((snapshot) {
       final data = snapshot.data() as Map<String, dynamic>?;
@@ -263,13 +286,14 @@ class SketchRepository {
     });
   }
 
+  @override
   Stream<List<SketchBackground>> watchSketchBackgrounds() {
     return _currentSketchSettingsRef().snapshots().map((snapshot) {
       final data = snapshot.data() as Map<String, dynamic>?;
       final backgroundsData = List<Map<String, dynamic>>.from(
         data?['backgrounds'] ?? [],
       );
-      return backgroundsData.map(SketchBackground.fromMap).toList();
+      return backgroundsData.map(SketchBackground.fromJson).toList();
     });
   }
 }

@@ -48,7 +48,7 @@ class GameSettingsRepository {
       if (!snapshot.exists || snapshot.data() == null) {
         return const GameSettings(); // Default settings if document doesn't exist
       }
-      return GameSettings.fromMap(snapshot.data() as Map<String, dynamic>);
+      return GameSettings.fromJson(snapshot.data() as Map<String, dynamic>);
     });
   }
 

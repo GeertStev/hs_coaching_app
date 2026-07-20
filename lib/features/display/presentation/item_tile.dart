@@ -44,7 +44,7 @@ class ItemTile extends StatelessWidget {
           if (dateModified != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Added on ${DateFormat('dd MMM yyyy, HH:mm').format(dateModified!.toLocal())}',
+              'Modified on ${DateFormat('dd MMM yyyy, HH:mm').format(dateModified!.toLocal())}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],

@@ -1,9 +1,155 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart'; // Gebruik FilePicker in plaats van ImagePicker
+import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_data_providers.dart';
+
+class AddSketchBackgroundDialog extends ConsumerStatefulWidget {
+  const AddSketchBackgroundDialog({super.key});
+
+  @override
+  ConsumerState<AddSketchBackgroundDialog> createState() =>
+      _AddSketchBackgroundDialogState();
+}
+
+class _AddSketchBackgroundDialogState
+    extends ConsumerState<AddSketchBackgroundDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  File? _svgFile;
+  String? _fileName;
+  bool _isUploading = false;
+
+  Future<void> _pickSvgFile() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['svg'], // Selecteer enkel SVG bestanden
+      );
+
+      if (result != null && result.files.single.path != null) {
+        setState(() {
+          _svgFile = File(result.files.single.path!);
+          _fileName = result.files.single.name;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fout bij selecteren bestand: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _uploadBackground() async {
+    if (_svgFile == null || !_formKey.currentState!.validate() || !mounted) {
+      return;
+    }
+
+    setState(() => _isUploading = true);
+
+    try {
+      // De repository uploadt de file direct naar Firebase Storage
+      await ref
+          .read(sketchRepositoryProvider)
+          .addSketchBackground(
+            imageFile: _svgFile!,
+            title: _titleController.text.trim(),
+          );
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Upload mislukt: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Nieuwe SVG Achtergrond'),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_svgFile == null)
+                OutlinedButton.icon(
+                  onPressed: _pickSvgFile,
+                  icon: const Icon(Icons.image),
+                  label: const Text('Selecteer SVG-bestand'),
+                )
+              else
+                ListTile(
+                  leading: const Icon(
+                    Icons.insert_drive_file,
+                    color: Colors.blue,
+                  ),
+                  title: Text(_fileName ?? 'Geselecteerd bestand'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () => setState(() {
+                      _svgFile = null;
+                      _fileName = null;
+                    }),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Naam van achtergrond (bijv. Zwembad 50m)',
+                ),
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Naam is verplicht'
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isUploading ? null : () => Navigator.of(context).pop(),
+          child: const Text('Annuleren'),
+        ),
+        FilledButton(
+          onPressed: (_svgFile == null || _isUploading)
+              ? null
+              : _uploadBackground,
+          child: _isUploading
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                )
+              : const Text('Uploaden'),
+        ),
+      ],
+    );
+  }
+}
+
+/*import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-//import 'package:hs_coaching_app/features/display/data/display_global_settings_provider.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_providers.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_data_providers.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -152,4 +298,4 @@ class _AddSketchBackgroundDialogState
       ],
     );
   }
-}
+}*/

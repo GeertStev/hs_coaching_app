@@ -1,4 +1,7 @@
-import 'package:flutter/foundation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'display_content_settings.freezed.dart';
+part 'display_content_settings.g.dart';
 
 /// The type of content to be displayed on the screen.
 enum DisplayContentType {
@@ -10,50 +13,21 @@ enum DisplayContentType {
   team,
   text,
   timer,
-  chrono;
-
-  /// Creates a [ScreenContentType] from a string.
-  ///
-  /// Defaults to [ScreenContentType.main] if the string is null or invalid.
-  static DisplayContentType fromString(String? value) {
-    if (value == null) return DisplayContentType.main;
-    return DisplayContentType.values.firstWhere(
-      (e) => e.name == value,
-      orElse: () => DisplayContentType.main,
-    );
-  }
+  chrono,
+  tabata,
 }
 
 /// Represents the content settings for a display.
 ///
 /// Path: /clubs/{clubId}/displays/{displayDeviceId}/settings/content
-@immutable
-class DisplayContentSettings {
-  final DisplayContentType contentType;
+@freezed
+abstract class DisplayContentSettings with _$DisplayContentSettings {
+  const factory DisplayContentSettings({
+    @Default(DisplayContentType.main)
+    @JsonKey(unknownEnumValue: DisplayContentType.main)
+    DisplayContentType contentType,
+  }) = _DisplayContentSettings;
 
-  const DisplayContentSettings({required this.contentType});
-
-  /// Creates [ScreenContentSettings] from a Firestore document map.
-  factory DisplayContentSettings.fromMap(Map<String, dynamic> data) {
-    return DisplayContentSettings(
-      contentType: DisplayContentType.fromString(
-        data['contentType'] as String?,
-      ),
-    );
-  }
-
-  /// Converts [ScreenContentSettings] to a map for Firestore.
-  Map<String, dynamic> toMap() {
-    return {'contentType': contentType.name};
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-
-    return other is DisplayContentSettings && other.contentType == contentType;
-  }
-
-  @override
-  int get hashCode => contentType.hashCode;
+  factory DisplayContentSettings.fromJson(Map<String, dynamic> json) =>
+      _$DisplayContentSettingsFromJson(json);
 }

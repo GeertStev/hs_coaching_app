@@ -9,11 +9,10 @@ part of 'app_user.dart';
 _AppUser _$AppUserFromJson(Map<String, dynamic> json) => _AppUser(
   firstName: json['firstName'] as String,
   lastName: json['lastName'] as String,
+  email: json['email'] as String?,
   picture: json['picture'] as String?,
-  role: json['role'] as String,
-  lastLogin: const TimestampConverter().fromJson(
-    json['lastLogin'] as Timestamp,
-  ),
+  role: json['role'] as String? ?? 'user',
+  lastLogin: const NullableTimestampConverter().fromJson(json['lastLogin']),
   personalInfo:
       (json['personalInfo'] as List<dynamic>?)
           ?.map((e) => PersonalInfo.fromJson(e as Map<String, dynamic>))
@@ -24,9 +23,10 @@ _AppUser _$AppUserFromJson(Map<String, dynamic> json) => _AppUser(
 Map<String, dynamic> _$AppUserToJson(_AppUser instance) => <String, dynamic>{
   'firstName': instance.firstName,
   'lastName': instance.lastName,
+  'email': instance.email,
   'picture': instance.picture,
   'role': instance.role,
-  'lastLogin': const TimestampConverter().toJson(instance.lastLogin),
+  'lastLogin': const NullableTimestampConverter().toJson(instance.lastLogin),
   'personalInfo': instance.personalInfo,
 };
 
@@ -39,10 +39,7 @@ _PersonalInfo _$PersonalInfoFromJson(Map<String, dynamic> json) =>
       country: json['country'] as String?,
       phoneNumber: json['phoneNumber'] as String?,
       email: json['email'] as String,
-      birthday: _$JsonConverterFromJson<Timestamp, DateTime>(
-        json['birthday'],
-        const TimestampConverter().fromJson,
-      ),
+      birthday: const NullableTimestampConverter().fromJson(json['birthday']),
       gender: json['gender'] as String?,
       emergencyContacts:
           (json['emergencyContacts'] as List<dynamic>?)
@@ -60,23 +57,10 @@ Map<String, dynamic> _$PersonalInfoToJson(_PersonalInfo instance) =>
       'country': instance.country,
       'phoneNumber': instance.phoneNumber,
       'email': instance.email,
-      'birthday': _$JsonConverterToJson<Timestamp, DateTime>(
-        instance.birthday,
-        const TimestampConverter().toJson,
-      ),
+      'birthday': const NullableTimestampConverter().toJson(instance.birthday),
       'gender': instance.gender,
       'emergencyContacts': instance.emergencyContacts,
     };
-
-Value? _$JsonConverterFromJson<Json, Value>(
-  Object? json,
-  Value? Function(Json json) fromJson,
-) => json == null ? null : fromJson(json as Json);
-
-Json? _$JsonConverterToJson<Json, Value>(
-  Value? value,
-  Json? Function(Value value) toJson,
-) => value == null ? null : toJson(value);
 
 _EmergencyContact _$EmergencyContactFromJson(Map<String, dynamic> json) =>
     _EmergencyContact(

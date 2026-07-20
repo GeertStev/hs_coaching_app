@@ -51,7 +51,7 @@ class DisplayGlobalSettingsRepository {
       // In what scenario are there no global settings? No connection? Hacking?
       throw Exception('Global settings not found for display: $_displayId');
     }
-    return DisplayGlobalSettings.fromMap(doc.data() as Map<String, dynamic>);
+    return DisplayGlobalSettings.fromJson(doc.data() as Map<String, dynamic>);
   }
 }
 
