@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata.dart';
+import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_item.dart';
 import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_preset.dart';
-import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_set.dart';
 
 class TabataRepository {
   TabataRepository({
@@ -26,7 +26,7 @@ class TabataRepository {
         .doc('tabata');
   }
 
-  /// Standaard sets (snelkoppelingen) op clubniveau, zoals de
+  /// Opgeslagen sessies (snelkoppelingen) op clubniveau, zoals de
   /// timer-bibliotheek.
   CollectionReference<Map<String, dynamic>> get _presetsRef {
     return _firestore
@@ -40,31 +40,12 @@ class TabataRepository {
       if (!snapshot.exists || snapshot.data() == null) {
         return const Tabata();
       }
-      return Tabata.fromJson(
-        _normalizeLegacySets(snapshot.data() as Map<String, dynamic>),
-      );
+      return Tabata.fromJson(snapshot.data() as Map<String, dynamic>);
     });
   }
 
-  /// Oude platte structuur (workSeconds/restSeconds/rounds op topniveau)
-  /// → dezelfde configuratie als één set. Normalisatie hoort in de
-  /// repository zodat [Tabata.fromJson] canoniek blijft (zie CLAUDE.md).
-  Map<String, dynamic> _normalizeLegacySets(Map<String, dynamic> data) {
-    if (data['sets'] != null) return data;
-    return {
-      ...data,
-      'sets': [
-        {
-          if (data['workSeconds'] != null) 'workSeconds': data['workSeconds'],
-          if (data['restSeconds'] != null) 'restSeconds': data['restSeconds'],
-          if (data['rounds'] != null) 'rounds': data['rounds'],
-        },
-      ],
-    };
-  }
-
-  /// Schrijft de configuratie (voorbereiding + sets). Alleen bedoeld terwijl
-  /// de timer gestopt is.
+  /// Schrijft de configuratie (voorbereiding + kaarten). Alleen bedoeld
+  /// terwijl de timer gestopt is.
   Future<void> saveConfig(Tabata tabata) async {
     await _tabataSettingsRef.set(
       tabata.copyWith(serverWriteTimestamp: null).toJson(),
@@ -117,23 +98,30 @@ class TabataRepository {
     );
   }
 
-  // ------------------------------------------------------ Standaard sets
+  // ------------------------------------------------------ Opgeslagen sessies
 
   Stream<List<TabataPreset>> watchPresets() {
     return _presetsRef.orderBy('title').snapshots().map(
-      (snapshot) => snapshot.docs
-          .map(
-            (doc) => TabataPreset(
-              id: doc.id,
-              set: TabataSet.fromJson(doc.data()),
-            ),
-          )
-          .toList(),
+      (snapshot) => snapshot.docs.map((doc) {
+        final data = doc.data();
+        return TabataPreset(
+          id: doc.id,
+          title: data['title'] as String? ?? '',
+          items: (data['items'] as List)
+              .map(
+                (json) => TabataItem.fromJson(json as Map<String, dynamic>),
+              )
+              .toList(),
+        );
+      }).toList(),
     );
   }
 
-  Future<void> savePreset(TabataSet set) async {
-    await _presetsRef.add(set.toJson());
+  Future<void> savePreset(String title, List<TabataItem> items) async {
+    await _presetsRef.add({
+      'title': title,
+      'items': items.map((item) => item.toJson()).toList(),
+    });
   }
 
   Future<void> deletePreset(String presetId) async {

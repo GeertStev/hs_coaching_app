@@ -1,12 +1,18 @@
-import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_set.dart';
+import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_item.dart';
 
-/// Een opgeslagen standaard set (snelkoppeling) uit de club-bibliotheek.
+/// Een opgeslagen sessie (snelkoppeling) uit de club-bibliotheek: de volledige
+/// kaartenlijst van een [Tabata], zoals opgebouwd in de editor.
 ///
 /// Pad: /clubs/{clubId}/tabataPresets/{id}
 class TabataPreset {
-  const TabataPreset({required this.id, required this.set});
+  const TabataPreset({
+    required this.id,
+    required this.title,
+    required this.items,
+  });
 
   /// Firestore document-id.
   final String id;
-  final TabataSet set;
+  final String title;
+  final List<TabataItem> items;
 }

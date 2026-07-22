@@ -1,5 +1,6 @@
 /// De fase waarin de tabata-timer zich bevindt op een bepaald moment.
-/// [setRest] is de rust tussen twee sets.
+/// [setRest] is de rust tussen twee kaarten (top-level of tussen kinderen
+/// binnen een groep) — zie [TabataItem.restAfter]/[TabataGroup.restAfter].
 enum TabataPhase { prepare, work, rest, setRest, finished }
 
 /// Afgeleide, berekende voortgang van een [Tabata] op een gegeven verstreken
@@ -9,11 +10,13 @@ enum TabataPhase { prepare, work, rest, setRest, finished }
 class TabataProgress {
   const TabataProgress({
     required this.phase,
-    required this.setIndex,
-    required this.totalSets,
-    required this.setTitle,
+    required this.itemIndex,
+    required this.totalItems,
+    required this.itemTitle,
     required this.round,
     required this.totalRounds,
+    required this.groupRepeat,
+    required this.totalGroupRepeats,
     required this.phaseRemaining,
     required this.phaseTotal,
     required this.elapsed,
@@ -22,17 +25,23 @@ class TabataProgress {
 
   final TabataPhase phase;
 
-  /// 1-gebaseerd setnummer. Tijdens [TabataPhase.setRest] wijst dit al naar
-  /// de volgende set, zodat het scherm toont waarvoor er gerust wordt.
-  final int setIndex;
-  final int totalSets;
+  /// 1-gebaseerd nummer van de huidige top-level kaart in [Tabata.items].
+  /// Tijdens [TabataPhase.setRest] wijst dit al naar de volgende kaart, zodat
+  /// het scherm toont waarvoor er gerust wordt.
+  final int itemIndex;
+  final int totalItems;
 
-  /// Titel van de huidige set (leeg als de set geen titel heeft).
-  final String setTitle;
+  /// Titel van de huidige oefening (leeg als de oefening geen titel heeft).
+  final String itemTitle;
 
-  /// 1-gebaseerd rondenummer binnen de huidige set.
+  /// 1-gebaseerd rondenummer binnen de huidige oefening.
   final int round;
   final int totalRounds;
+
+  /// 1-gebaseerde herhaling van de omvattende groep, of `null` als de huidige
+  /// oefening geen deel uitmaakt van een groep.
+  final int? groupRepeat;
+  final int? totalGroupRepeats;
 
   /// Resterende tijd binnen de huidige fase.
   final Duration phaseRemaining;

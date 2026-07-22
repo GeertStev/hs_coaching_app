@@ -8,11 +8,11 @@ part of 'tabata.dart';
 
 _Tabata _$TabataFromJson(Map<String, dynamic> json) => _Tabata(
   prepareSeconds: (json['prepareSeconds'] as num?)?.toInt() ?? 10,
-  sets:
-      (json['sets'] as List<dynamic>?)
-          ?.map((e) => TabataSet.fromJson(e as Map<String, dynamic>))
+  items:
+      (json['items'] as List<dynamic>?)
+          ?.map((e) => TabataItem.fromJson(e as Map<String, dynamic>))
           .toList() ??
-      const [TabataSet()],
+      const [TabataItem.exercise(TabataExercise(id: 'default'))],
   status:
       $enumDecodeNullable(_$TabataStatusEnumMap, json['status']) ??
       TabataStatus.stopped,
@@ -28,7 +28,7 @@ _Tabata _$TabataFromJson(Map<String, dynamic> json) => _Tabata(
 
 Map<String, dynamic> _$TabataToJson(_Tabata instance) => <String, dynamic>{
   'prepareSeconds': instance.prepareSeconds,
-  'sets': instance.sets.map((e) => e.toJson()).toList(),
+  'items': instance.items.map((e) => e.toJson()).toList(),
   'status': _$TabataStatusEnumMap[instance.status]!,
   'authoritativeStartTimeMillis': instance.authoritativeStartTimeMillis,
   'serverWriteTimestamp': const ServerTimestampConverter().toJson(

@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 mixin _$Tabata {
 
 // --- Configuratie ---
- int get prepareSeconds; List<TabataSet> get sets;// --- Runtime status (zelfde mechanisme als Chrono) ---
+ int get prepareSeconds; List<TabataItem> get items;// --- Runtime status (zelfde mechanisme als Chrono) ---
  TabataStatus get status;/// The local timestamp from the control app when the button was pressed.
  int get authoritativeStartTimeMillis;/// Firestore server timestamp of when the start event was written.
 @ServerTimestampConverter() Timestamp? get serverWriteTimestamp;/// Time accumulated before the current running session.
@@ -33,16 +33,16 @@ $TabataCopyWith<Tabata> get copyWith => _$TabataCopyWithImpl<Tabata>(this as Tab
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Tabata&&(identical(other.prepareSeconds, prepareSeconds) || other.prepareSeconds == prepareSeconds)&&const DeepCollectionEquality().equals(other.sets, sets)&&(identical(other.status, status) || other.status == status)&&(identical(other.authoritativeStartTimeMillis, authoritativeStartTimeMillis) || other.authoritativeStartTimeMillis == authoritativeStartTimeMillis)&&(identical(other.serverWriteTimestamp, serverWriteTimestamp) || other.serverWriteTimestamp == serverWriteTimestamp)&&(identical(other.accumulatedElapsedMillis, accumulatedElapsedMillis) || other.accumulatedElapsedMillis == accumulatedElapsedMillis));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Tabata&&(identical(other.prepareSeconds, prepareSeconds) || other.prepareSeconds == prepareSeconds)&&const DeepCollectionEquality().equals(other.items, items)&&(identical(other.status, status) || other.status == status)&&(identical(other.authoritativeStartTimeMillis, authoritativeStartTimeMillis) || other.authoritativeStartTimeMillis == authoritativeStartTimeMillis)&&(identical(other.serverWriteTimestamp, serverWriteTimestamp) || other.serverWriteTimestamp == serverWriteTimestamp)&&(identical(other.accumulatedElapsedMillis, accumulatedElapsedMillis) || other.accumulatedElapsedMillis == accumulatedElapsedMillis));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,prepareSeconds,const DeepCollectionEquality().hash(sets),status,authoritativeStartTimeMillis,serverWriteTimestamp,accumulatedElapsedMillis);
+int get hashCode => Object.hash(runtimeType,prepareSeconds,const DeepCollectionEquality().hash(items),status,authoritativeStartTimeMillis,serverWriteTimestamp,accumulatedElapsedMillis);
 
 @override
 String toString() {
-  return 'Tabata(prepareSeconds: $prepareSeconds, sets: $sets, status: $status, authoritativeStartTimeMillis: $authoritativeStartTimeMillis, serverWriteTimestamp: $serverWriteTimestamp, accumulatedElapsedMillis: $accumulatedElapsedMillis)';
+  return 'Tabata(prepareSeconds: $prepareSeconds, items: $items, status: $status, authoritativeStartTimeMillis: $authoritativeStartTimeMillis, serverWriteTimestamp: $serverWriteTimestamp, accumulatedElapsedMillis: $accumulatedElapsedMillis)';
 }
 
 
@@ -53,7 +53,7 @@ abstract mixin class $TabataCopyWith<$Res>  {
   factory $TabataCopyWith(Tabata value, $Res Function(Tabata) _then) = _$TabataCopyWithImpl;
 @useResult
 $Res call({
- int prepareSeconds, List<TabataSet> sets, TabataStatus status, int authoritativeStartTimeMillis,@ServerTimestampConverter() Timestamp? serverWriteTimestamp, int accumulatedElapsedMillis
+ int prepareSeconds, List<TabataItem> items, TabataStatus status, int authoritativeStartTimeMillis,@ServerTimestampConverter() Timestamp? serverWriteTimestamp, int accumulatedElapsedMillis
 });
 
 
@@ -70,11 +70,11 @@ class _$TabataCopyWithImpl<$Res>
 
 /// Create a copy of Tabata
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? prepareSeconds = null,Object? sets = null,Object? status = null,Object? authoritativeStartTimeMillis = null,Object? serverWriteTimestamp = freezed,Object? accumulatedElapsedMillis = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? prepareSeconds = null,Object? items = null,Object? status = null,Object? authoritativeStartTimeMillis = null,Object? serverWriteTimestamp = freezed,Object? accumulatedElapsedMillis = null,}) {
   return _then(_self.copyWith(
 prepareSeconds: null == prepareSeconds ? _self.prepareSeconds : prepareSeconds // ignore: cast_nullable_to_non_nullable
-as int,sets: null == sets ? _self.sets : sets // ignore: cast_nullable_to_non_nullable
-as List<TabataSet>,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as int,items: null == items ? _self.items : items // ignore: cast_nullable_to_non_nullable
+as List<TabataItem>,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as TabataStatus,authoritativeStartTimeMillis: null == authoritativeStartTimeMillis ? _self.authoritativeStartTimeMillis : authoritativeStartTimeMillis // ignore: cast_nullable_to_non_nullable
 as int,serverWriteTimestamp: freezed == serverWriteTimestamp ? _self.serverWriteTimestamp : serverWriteTimestamp // ignore: cast_nullable_to_non_nullable
 as Timestamp?,accumulatedElapsedMillis: null == accumulatedElapsedMillis ? _self.accumulatedElapsedMillis : accumulatedElapsedMillis // ignore: cast_nullable_to_non_nullable
@@ -163,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int prepareSeconds,  List<TabataSet> sets,  TabataStatus status,  int authoritativeStartTimeMillis, @ServerTimestampConverter()  Timestamp? serverWriteTimestamp,  int accumulatedElapsedMillis)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int prepareSeconds,  List<TabataItem> items,  TabataStatus status,  int authoritativeStartTimeMillis, @ServerTimestampConverter()  Timestamp? serverWriteTimestamp,  int accumulatedElapsedMillis)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Tabata() when $default != null:
-return $default(_that.prepareSeconds,_that.sets,_that.status,_that.authoritativeStartTimeMillis,_that.serverWriteTimestamp,_that.accumulatedElapsedMillis);case _:
+return $default(_that.prepareSeconds,_that.items,_that.status,_that.authoritativeStartTimeMillis,_that.serverWriteTimestamp,_that.accumulatedElapsedMillis);case _:
   return orElse();
 
 }
@@ -184,10 +184,10 @@ return $default(_that.prepareSeconds,_that.sets,_that.status,_that.authoritative
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int prepareSeconds,  List<TabataSet> sets,  TabataStatus status,  int authoritativeStartTimeMillis, @ServerTimestampConverter()  Timestamp? serverWriteTimestamp,  int accumulatedElapsedMillis)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int prepareSeconds,  List<TabataItem> items,  TabataStatus status,  int authoritativeStartTimeMillis, @ServerTimestampConverter()  Timestamp? serverWriteTimestamp,  int accumulatedElapsedMillis)  $default,) {final _that = this;
 switch (_that) {
 case _Tabata():
-return $default(_that.prepareSeconds,_that.sets,_that.status,_that.authoritativeStartTimeMillis,_that.serverWriteTimestamp,_that.accumulatedElapsedMillis);case _:
+return $default(_that.prepareSeconds,_that.items,_that.status,_that.authoritativeStartTimeMillis,_that.serverWriteTimestamp,_that.accumulatedElapsedMillis);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -204,10 +204,10 @@ return $default(_that.prepareSeconds,_that.sets,_that.status,_that.authoritative
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int prepareSeconds,  List<TabataSet> sets,  TabataStatus status,  int authoritativeStartTimeMillis, @ServerTimestampConverter()  Timestamp? serverWriteTimestamp,  int accumulatedElapsedMillis)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int prepareSeconds,  List<TabataItem> items,  TabataStatus status,  int authoritativeStartTimeMillis, @ServerTimestampConverter()  Timestamp? serverWriteTimestamp,  int accumulatedElapsedMillis)?  $default,) {final _that = this;
 switch (_that) {
 case _Tabata() when $default != null:
-return $default(_that.prepareSeconds,_that.sets,_that.status,_that.authoritativeStartTimeMillis,_that.serverWriteTimestamp,_that.accumulatedElapsedMillis);case _:
+return $default(_that.prepareSeconds,_that.items,_that.status,_that.authoritativeStartTimeMillis,_that.serverWriteTimestamp,_that.accumulatedElapsedMillis);case _:
   return null;
 
 }
@@ -219,16 +219,16 @@ return $default(_that.prepareSeconds,_that.sets,_that.status,_that.authoritative
 
 @JsonSerializable(explicitToJson: true)
 class _Tabata extends Tabata {
-  const _Tabata({this.prepareSeconds = 10, final  List<TabataSet> sets = const [TabataSet()], this.status = TabataStatus.stopped, this.authoritativeStartTimeMillis = 0, @ServerTimestampConverter() this.serverWriteTimestamp, this.accumulatedElapsedMillis = 0}): _sets = sets,super._();
+  const _Tabata({this.prepareSeconds = 10, final  List<TabataItem> items = const [TabataItem.exercise(TabataExercise(id: 'default'))], this.status = TabataStatus.stopped, this.authoritativeStartTimeMillis = 0, @ServerTimestampConverter() this.serverWriteTimestamp, this.accumulatedElapsedMillis = 0}): _items = items,super._();
   factory _Tabata.fromJson(Map<String, dynamic> json) => _$TabataFromJson(json);
 
 // --- Configuratie ---
 @override@JsonKey() final  int prepareSeconds;
- final  List<TabataSet> _sets;
-@override@JsonKey() List<TabataSet> get sets {
-  if (_sets is EqualUnmodifiableListView) return _sets;
+ final  List<TabataItem> _items;
+@override@JsonKey() List<TabataItem> get items {
+  if (_items is EqualUnmodifiableListView) return _items;
   // ignore: implicit_dynamic_type
-  return EqualUnmodifiableListView(_sets);
+  return EqualUnmodifiableListView(_items);
 }
 
 // --- Runtime status (zelfde mechanisme als Chrono) ---
@@ -253,16 +253,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Tabata&&(identical(other.prepareSeconds, prepareSeconds) || other.prepareSeconds == prepareSeconds)&&const DeepCollectionEquality().equals(other._sets, _sets)&&(identical(other.status, status) || other.status == status)&&(identical(other.authoritativeStartTimeMillis, authoritativeStartTimeMillis) || other.authoritativeStartTimeMillis == authoritativeStartTimeMillis)&&(identical(other.serverWriteTimestamp, serverWriteTimestamp) || other.serverWriteTimestamp == serverWriteTimestamp)&&(identical(other.accumulatedElapsedMillis, accumulatedElapsedMillis) || other.accumulatedElapsedMillis == accumulatedElapsedMillis));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Tabata&&(identical(other.prepareSeconds, prepareSeconds) || other.prepareSeconds == prepareSeconds)&&const DeepCollectionEquality().equals(other._items, _items)&&(identical(other.status, status) || other.status == status)&&(identical(other.authoritativeStartTimeMillis, authoritativeStartTimeMillis) || other.authoritativeStartTimeMillis == authoritativeStartTimeMillis)&&(identical(other.serverWriteTimestamp, serverWriteTimestamp) || other.serverWriteTimestamp == serverWriteTimestamp)&&(identical(other.accumulatedElapsedMillis, accumulatedElapsedMillis) || other.accumulatedElapsedMillis == accumulatedElapsedMillis));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,prepareSeconds,const DeepCollectionEquality().hash(_sets),status,authoritativeStartTimeMillis,serverWriteTimestamp,accumulatedElapsedMillis);
+int get hashCode => Object.hash(runtimeType,prepareSeconds,const DeepCollectionEquality().hash(_items),status,authoritativeStartTimeMillis,serverWriteTimestamp,accumulatedElapsedMillis);
 
 @override
 String toString() {
-  return 'Tabata(prepareSeconds: $prepareSeconds, sets: $sets, status: $status, authoritativeStartTimeMillis: $authoritativeStartTimeMillis, serverWriteTimestamp: $serverWriteTimestamp, accumulatedElapsedMillis: $accumulatedElapsedMillis)';
+  return 'Tabata(prepareSeconds: $prepareSeconds, items: $items, status: $status, authoritativeStartTimeMillis: $authoritativeStartTimeMillis, serverWriteTimestamp: $serverWriteTimestamp, accumulatedElapsedMillis: $accumulatedElapsedMillis)';
 }
 
 
@@ -273,7 +273,7 @@ abstract mixin class _$TabataCopyWith<$Res> implements $TabataCopyWith<$Res> {
   factory _$TabataCopyWith(_Tabata value, $Res Function(_Tabata) _then) = __$TabataCopyWithImpl;
 @override @useResult
 $Res call({
- int prepareSeconds, List<TabataSet> sets, TabataStatus status, int authoritativeStartTimeMillis,@ServerTimestampConverter() Timestamp? serverWriteTimestamp, int accumulatedElapsedMillis
+ int prepareSeconds, List<TabataItem> items, TabataStatus status, int authoritativeStartTimeMillis,@ServerTimestampConverter() Timestamp? serverWriteTimestamp, int accumulatedElapsedMillis
 });
 
 
@@ -290,11 +290,11 @@ class __$TabataCopyWithImpl<$Res>
 
 /// Create a copy of Tabata
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? prepareSeconds = null,Object? sets = null,Object? status = null,Object? authoritativeStartTimeMillis = null,Object? serverWriteTimestamp = freezed,Object? accumulatedElapsedMillis = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? prepareSeconds = null,Object? items = null,Object? status = null,Object? authoritativeStartTimeMillis = null,Object? serverWriteTimestamp = freezed,Object? accumulatedElapsedMillis = null,}) {
   return _then(_Tabata(
 prepareSeconds: null == prepareSeconds ? _self.prepareSeconds : prepareSeconds // ignore: cast_nullable_to_non_nullable
-as int,sets: null == sets ? _self._sets : sets // ignore: cast_nullable_to_non_nullable
-as List<TabataSet>,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as int,items: null == items ? _self._items : items // ignore: cast_nullable_to_non_nullable
+as List<TabataItem>,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as TabataStatus,authoritativeStartTimeMillis: null == authoritativeStartTimeMillis ? _self.authoritativeStartTimeMillis : authoritativeStartTimeMillis // ignore: cast_nullable_to_non_nullable
 as int,serverWriteTimestamp: freezed == serverWriteTimestamp ? _self.serverWriteTimestamp : serverWriteTimestamp // ignore: cast_nullable_to_non_nullable
 as Timestamp?,accumulatedElapsedMillis: null == accumulatedElapsedMillis ? _self.accumulatedElapsedMillis : accumulatedElapsedMillis // ignore: cast_nullable_to_non_nullable

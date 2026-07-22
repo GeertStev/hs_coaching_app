@@ -3,8 +3,8 @@ import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
 import 'package:hs_coaching_app/features/display/features/tabata/data/tabata_repository.dart';
 import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata.dart';
+import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_item.dart';
 import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_preset.dart';
-import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_set.dart';
 
 final tabataRepositoryProvider = Provider<TabataRepository>((ref) {
   final firestore = ref.watch(firebaseFirestoreProvider);
@@ -32,7 +32,7 @@ final tabataNotifierProvider = StreamNotifierProvider<TabataNotifier, Tabata>(
   TabataNotifier.new,
 );
 
-/// Standaard sets (snelkoppelingen) uit de club-bibliotheek.
+/// Opgeslagen sessies (snelkoppelingen) uit de club-bibliotheek.
 final tabataPresetsProvider = StreamProvider<List<TabataPreset>>((ref) {
   return ref.watch(tabataRepositoryProvider).watchPresets();
 });
@@ -125,12 +125,12 @@ class TabataCommands {
     }
   }
 
-  // ------------------------------------------------------ Standaard sets
+  // ------------------------------------------------------ Opgeslagen sessies
   // Geen optimistische update nodig: de presets-stream is geen onderdeel
   // van de lopende timer-state.
 
-  Future<void> savePreset(TabataSet set) {
-    return ref.read(tabataRepositoryProvider).savePreset(set);
+  Future<void> savePreset(String title, List<TabataItem> items) {
+    return ref.read(tabataRepositoryProvider).savePreset(title, items);
   }
 
   Future<void> deletePreset(String presetId) {

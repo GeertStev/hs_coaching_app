@@ -52,6 +52,7 @@ lib/
       presentation/# ContentControlScreen + generic content list/card/edit-dialog scaffolding
       features/    # sub-features, each self-contained data/domain/presentation:
         sketch/    # most complex: command pattern, tools, perfect_freehand, backgrounds
+        tabata/    # tree-structured model (grouped exercises) + custom drag-and-drop editor
         image/  text/  chrono/  timer/  game/  team/  tag_and_search/
 ```
 
@@ -86,6 +87,14 @@ users/{uid}                            # AppUser (profile, personalInfo, emergen
   `firebase.json`; deploy both with `firebase deploy --only firestore` (no `--force` — the
   project has extra auto-created indexes not in the file). Display subtree is world-readable for
   the display web app; writes require trainer/clubAdmin.
+  There's no `.firebaserc`, so pass `--project hs-coaching` explicitly (or use
+  `--only firestore:rules` to deploy just the rules file).
+  **Gotcha:** a rule already being correct and committed in `firestore.rules` does not mean
+  it's live — the file only takes effect after an explicit deploy. Hit this with the
+  `tabataPresets` rule (`isActiveMember(clubId)`, correct in the repo) still returning
+  `PERMISSION_DENIED` in the running app; the fix was simply running the deploy above. If a
+  rule "looks right" but a request is still denied, check whether it's actually been deployed
+  before assuming the rule logic itself is wrong.
 - **Riverpod 3 auto-retry gotcha:** a provider whose stream fails (e.g. missing index →
   `failed-precondition`) is retried with backoff by default; Firestore then re-emits cached data
   before each new failure, so the UI flickers loading↔data and the real error (incl. the
@@ -117,6 +126,38 @@ This is the intended pattern for realtime mutations (see `main.dart` prompt bloc
   `sketch/domain/command.dart`) take a `Ref`, apply the optimistic update, then write to the repo,
   and **roll back** the local state on error. `execute`/`undo` support undo/redo.
 
+### Tabata (grouped exercises) — tree model + custom drag-and-drop (reference example)
+The Tabata editor is the codebase's reference example for **tree-structured content** and for
+**drag-and-drop**, neither of which existed anywhere else before this feature:
+- Domain shape (`tabata/domain/`): `TabataExercise` (leaf card: rounds/work/rest/`stepSeconds`,
+  the last generalizing the old beeptest decrement to allow both shrinking (`-`) and growing (`+`)
+  work per round) and `TabataGroup` (container: `rounds` + `restBetweenRepeats` for the whole
+  group, `children: List<TabataExercise>`, **one level deep only** — no nested groups). Both are
+  unified as `TabataItem`, a Freezed **sealed union** (`.exercise(...)` / `.group(...)`) — the
+  first union type in this codebase; see its `.g.dart` for the discriminator shape
+  (`{'exercise'|'group': {...}, 'runtimeType': 'exercise'|'group'}`). Every item (exercise or
+  group) carries its own `restAfter`: rest before the *next sibling* in whatever list it's part
+  of (top-level `Tabata.items`, or a group's `children`), ignored when it's the last element of
+  that list.
+- Duration/progress engine (`tabata.dart`): `Tabata._flatten(items)` walks the whole tree once
+  into a linear list of work/rest steps (handling group repeats, inter-child rest, and
+  inter-item rest uniformly); `totalDurationMillis`/`progressAt` are simple scans over that flat
+  list. Prefer this "flatten to a timeline, then scan" shape over nested loops for any
+  future feature with tree-shaped timing — it's what made group-repeat rest solvable without the
+  progress model turning into a maze of special cases.
+- Reorder/group/ungroup logic lives in `tabata_item_tree.dart` — pure functions
+  (`moveItem`, `groupWithTarget`, `removeItem`, `replaceExercise`, ...) operating on
+  `List<TabataItem>`, Flutter-free and unit-tested (`test/.../tabata_item_tree_test.dart`).
+  The UI (`tabata_control_screen.dart`) only wires `LongPressDraggable`/`DragTarget` around
+  cards and insert-gaps and calls into these functions — it never manipulates the tree itself.
+  `removeItem` auto-collapses a group down to a plain exercise when it's left with one child,
+  and drops it entirely when left with none.
+- **No legacy-shape migration, on purpose.** Unlike Sketch's documented `_normalizeLegacyName`
+  pattern, `TabataRepository` reads/writes only the current `items` shape — an earlier version
+  of this feature added migration for older `sets`/flat document shapes, but there was no real
+  legacy data to protect, so it was deliberately removed. Don't add migration shims for a model
+  unprompted; only do it when there's actual data in the field that needs it.
+
 ### Riverpod 3.0 conventions in force (from `main.dart` prompt)
 - No `FamilyNotifier`/`FamilyAsyncNotifier`/`FamilyStreamNotifier` — use base `Notifier`/`AsyncNotifier`/`StreamNotifier` and pass family args through the **constructor**, stored as instance vars; `build()` takes no params.
 - Use `.value` on `AsyncValue`, never `.valueOrNull`.
@@ -142,6 +183,10 @@ No localization layer (`intl` is only used for formatting).
 3. **No tests at all** — no `test/` dir. Repositories are constructor-injected (good), so start with
    unit tests using `fake_cloud_firestore` + provider `overrides`. The sketch command/optimistic
    flow is the highest-value target.
+   **Partially started:** `test/features/display/features/tabata/domain/` now covers the
+   progress/duration engine and the tree helper (pure Dart, no Firestore needed) — follow this
+   as the template for other features' domain logic before tackling the `fake_cloud_firestore`
+   repository-layer work, which is still untouched everywhere.
 4. **Hardcoded `displayDeviceIdsProvider`** (`holySquid`/`bilzen`). Blocks multi-club/multi-display
    use and any integration test that isn't that exact device. Replace with a real setup/config flow
    (local storage / login-derived) and make it overridable in tests.
@@ -176,6 +221,21 @@ No localization layer (`intl` is only used for formatting).
    - Always run `dart run build_runner build` after touching these files and confirm both
      `*.freezed.dart` and `*.g.dart` were (re)written — if `.g.dart` is missing, suspect the
      `fromJson` canonical-form gotcha above before anything else.
+   - **Gotcha: `explicitToJson: true` must be set at *every* nesting level, not just the
+     outermost model.** json_serializable only calls `.toJson()` on a nested Freezed
+     object/union when the class *containing* that field has `explicitToJson: true`; otherwise
+     it embeds the raw Dart object straight into the generated map. This compiles fine and
+     `flutter analyze`/unit tests that only check Dart-level round-trips won't catch it — it
+     only blows up at the serialization boundary itself, e.g. Firestore's
+     `StandardMessageCodec` throwing `Invalid argument: Instance of '_TabataExercise'`. Hit this
+     with the Tabata tree model: `Tabata` had the annotation (so `items.map((e) => e.toJson())`
+     was correct) but `TabataGroup` (its `children` field) and `TabataItem` (its `exercise`/
+     `group` payload) didn't, so *their* generated `toJson()` embedded the raw nested object.
+     Fixed by adding `@JsonSerializable(explicitToJson: true)` to every constructor that holds
+     another Freezed model or a `List`/union of them, then regenerating. For any model with
+     nested Freezed types (especially unions or `List<SomeFreezedType>`), add a regression test
+     that actually calls `.toJson()` on it (e.g. `jsonEncode(model.toJson())`) — a test that
+     never calls `toJson()` cannot catch this.
 6. **Repository abstraction is leaky/uneven.** Only sketch has an interface (`ISketchRepository`).
    `TeamSettingsRepository.watchTeamSettings()` returns a raw `DocumentSnapshot` to the provider layer
    (`team_repository.dart:105`) — domain code shouldn't touch Firestore types. Add thin interfaces or
@@ -208,5 +268,8 @@ No localization layer (`intl` is only used for formatting).
 - After editing any Freezed/JSON model, **regenerate** with build_runner before assuming it compiles.
 - Follow the **sketch feature** as the canonical example for new realtime features (repo → StreamNotifier
   with optimistic methods → Command classes with rollback → autoDispose AsyncNotifier controller).
+- Follow the **tabata feature** as the canonical example for tree-structured/groupable content and for
+  drag-and-drop (pure-Dart tree ops in a dedicated `*_item_tree.dart` file, `LongPressDraggable`/
+  `DragTarget` only in the widget layer, "flatten to a timeline" for any tree-shaped timing).
 - Keep repositories free of Flutter/Firestore leakage at their public boundary so they stay unit-testable.
 - Match existing Dutch comments/strings in a given file; don't introduce a translation layer unprompted.
