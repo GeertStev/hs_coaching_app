@@ -57,7 +57,7 @@ class _SearchAndTagBarState extends ConsumerState<SearchAndTagBar> {
       transitionBuilder: (child, animation) {
         return SizeTransition(
           sizeFactor: animation,
-          axisAlignment: -1,
+          alignment: const AlignmentDirectional(-1, -1),
           child: child,
         );
       },

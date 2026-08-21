@@ -1,13 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
-import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
+import 'package:hs_coaching_core/chrono/chrono.dart';
+import 'package:hs_coaching_core/core/providers/display_device_ids_provider.dart';
+import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
+import 'package:hs_coaching_core/core/providers/server_time_offset_provider.dart';
 import 'package:hs_coaching_app/features/display/features/chrono/data/chrono_repository.dart';
-import 'package:hs_coaching_app/features/display/features/chrono/domain/chrono.dart';
 
-final chronoRepositoryProvider = Provider<ChronoRepository>((ref) {
+final chronoRepositoryProvider = Provider<DisplayChronoRepository>((ref) {
   final firestore = ref.watch(firebaseFirestoreProvider);
   final ids = ref.watch(displayDeviceIdsProvider);
-  return ChronoRepository(
+  return DisplayChronoRepository(
     firestore: firestore,
     clubId: ids.clubId,
     displayId: ids.displayDeviceId,
@@ -34,11 +35,16 @@ class ChronoCommands {
   const ChronoCommands(this.ref);
   final Ref ref;
 
+  int get _nowServerMillis {
+    final offsetMillis = ref.read(serverTimeOffsetProvider).value ?? 0;
+    return serverNowMillis(offsetMillis);
+  }
+
   Future<void> start(Chrono currentChrono, {int countdownMillis = 0}) async {
     final repository = ref.read(chronoRepositoryProvider);
     final notifier = ref.read(chronoNotifierProvider.notifier);
 
-    final eventTime = DateTime.now().millisecondsSinceEpoch + countdownMillis;
+    final eventTime = _nowServerMillis + countdownMillis;
     final optimisticState = currentChrono.copyWith(
       status: ChronoStatus.running,
       authoritativeStartTimeMillis: eventTime,
@@ -47,7 +53,11 @@ class ChronoCommands {
     notifier.setOptimistic(optimisticState);
 
     try {
-      await repository.start(currentChrono, countdownMillis: countdownMillis);
+      await repository.start(
+        currentChrono,
+        nowServerMillis: _nowServerMillis,
+        countdownMillis: countdownMillis,
+      );
     } catch (e) {
       ref.invalidate(chronoNotifierProvider);
       rethrow;
@@ -58,12 +68,10 @@ class ChronoCommands {
     final repository = ref.read(chronoRepositoryProvider);
     final notifier = ref.read(chronoNotifierProvider.notifier);
 
-    final pauseEventTime = DateTime.now().millisecondsSinceEpoch;
-    final newlyElapsed =
-        pauseEventTime - currentChrono.authoritativeStartTimeMillis;
+    final nowServerMillis = _nowServerMillis;
+    final newlyElapsed = nowServerMillis - currentChrono.authoritativeStartTimeMillis;
     final totalAccumulated =
-        currentChrono.accumulatedElapsedMillis +
-        (newlyElapsed > 0 ? newlyElapsed : 0);
+        currentChrono.accumulatedElapsedMillis + (newlyElapsed > 0 ? newlyElapsed : 0);
 
     notifier.setOptimistic(
       currentChrono.copyWith(
@@ -73,7 +81,7 @@ class ChronoCommands {
     );
 
     try {
-      await repository.pause(currentChrono);
+      await repository.pause(currentChrono, nowServerMillis: nowServerMillis);
     } catch (e) {
       ref.invalidate(chronoNotifierProvider);
       rethrow;
@@ -84,12 +92,10 @@ class ChronoCommands {
     final repository = ref.read(chronoRepositoryProvider);
     final notifier = ref.read(chronoNotifierProvider.notifier);
 
-    // Optimistische update array
     final newLaps = List<int>.from(currentChrono.laps)..add(elapsedMillis);
     notifier.setOptimistic(currentChrono.copyWith(laps: newLaps));
 
     try {
-      // FIX: Stuur de volledige nieuwe lijst (newLaps) door naar de repository
       await repository.lap(currentChrono, newLaps);
     } catch (e) {
       ref.invalidate(chronoNotifierProvider);

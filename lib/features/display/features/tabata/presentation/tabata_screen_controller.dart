@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/features/tabata/data/tabata_provider.dart';
-import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata.dart';
-import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_progress.dart';
+import 'package:hs_coaching_core/core/providers/server_time_offset_provider.dart';
+import 'package:hs_coaching_core/tabata/tabata.dart';
+import 'package:hs_coaching_core/tabata/tabata_progress.dart';
 
 /// Vertaalt de gesynchroniseerde [Tabata] state naar een lokaal tikkende
-/// [TabataProgress], naar het voorbeeld van [ChronoScreenController].
+/// [TabataProgress], volgens hetzelfde RTDB-klokdrift-principe als
+/// `ChronoScreenController`.
 class TabataScreenController extends Notifier<TabataProgress> {
   Timer? _timer;
   int? _lastTickSecond;
@@ -17,6 +19,7 @@ class TabataScreenController extends Notifier<TabataProgress> {
   TabataProgress build() {
     final tabataAsync = ref.watch(tabataNotifierProvider);
     final tabata = tabataAsync.value ?? const Tabata();
+    final offsetMillis = ref.watch(serverTimeOffsetProvider).value ?? 0;
 
     ref.onDispose(() {
       _timer?.cancel();
@@ -26,7 +29,8 @@ class TabataScreenController extends Notifier<TabataProgress> {
 
     if (tabata.status == TabataStatus.running) {
       _timer = Timer.periodic(const Duration(milliseconds: 100), (_) {
-        final progress = _calculateProgress(tabata);
+        final currentOffset = ref.read(serverTimeOffsetProvider).value ?? 0;
+        final progress = _calculateProgress(tabata, currentOffset);
         if (progress.phase == TabataPhase.finished) {
           _timer?.cancel();
         }
@@ -34,15 +38,13 @@ class TabataScreenController extends Notifier<TabataProgress> {
       });
     }
 
-    return _calculateProgress(tabata);
+    return _calculateProgress(tabata, offsetMillis);
   }
 
-  TabataProgress _calculateProgress(Tabata tabata) {
+  TabataProgress _calculateProgress(Tabata tabata, double offsetMillis) {
     var elapsedMillis = tabata.accumulatedElapsedMillis;
     if (tabata.status == TabataStatus.running) {
-      elapsedMillis +=
-          DateTime.now().millisecondsSinceEpoch -
-          tabata.authoritativeStartTimeMillis;
+      elapsedMillis += serverNowMillis(offsetMillis) - tabata.authoritativeStartTimeMillis;
     }
 
     final progress = tabata.progressAt(elapsedMillis);

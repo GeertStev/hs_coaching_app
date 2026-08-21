@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:hs_coaching_app/features/display/application/search_service.dart';
 import 'package:hs_coaching_app/features/display/features/text/data/display_text_repository.dart';
-import 'package:hs_coaching_app/features/display/features/text/domain/display_text.dart';
+import 'package:hs_coaching_core/text/display_text.dart';
 
 final allActiveTextsProvider =
     StreamProvider.family<List<DisplayText>, String?>((ref, tag) {

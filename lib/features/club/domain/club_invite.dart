@@ -1,5 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:hs_coaching_app/core/data/firestore_converters.dart';
+import 'package:hs_coaching_core/core/data/firestore_converters.dart';
 import 'package:hs_coaching_app/features/club/domain/club_membership.dart';
 
 part 'club_invite.freezed.dart';

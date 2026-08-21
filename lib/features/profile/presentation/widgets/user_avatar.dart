@@ -32,8 +32,11 @@ class UserAvatar extends StatelessWidget {
     return '?';
   }
 
-  /// Stabiele achtergrondkleur op basis van de naam.
-  Color _backgroundColor(BuildContext context) {
+  /// Stabiele achtergrondkleur op basis van de naam. Bewust een eigen, ruimere
+  /// palet dan DESIGN.md's Blauw/Geel — dat palet is te smal om N gebruikers
+  /// onderling te onderscheiden; avatar-identiteitskleuren zijn hier een
+  /// bewuste uitzondering op de merkkleuren, geen vergeten theming.
+  Color _backgroundColor() {
     final colors = [
       Colors.blue,
       Colors.teal,
@@ -62,10 +65,10 @@ class UserAvatar extends StatelessWidget {
     }
     return CircleAvatar(
       radius: radius,
-      backgroundColor: _backgroundColor(context),
+      backgroundColor: _backgroundColor(),
       child: Text(
         _initial,
-        style: TextStyle(
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
           color: Colors.white,
           fontSize: radius * 0.9,
           fontWeight: FontWeight.bold,

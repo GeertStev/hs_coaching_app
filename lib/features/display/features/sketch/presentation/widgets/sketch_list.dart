@@ -7,7 +7,7 @@ import 'package:hs_coaching_app/features/display/features/sketch/presentation/di
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
 //import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog_parts.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_sheet.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch.dart';
+import 'package:hs_coaching_core/sketch/sketch.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_screen.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_item_card.dart';
 import 'package:hs_coaching_app/features/display/presentation/item_tile.dart';
@@ -72,6 +72,7 @@ class SketchList extends ConsumerWidget {
       itemTypePlural: 'sketches',
       allTagsProvider: allSketchTagsProvider,
       selectedTagProvider: selectedTagProvider,
+      emptyStateMessage: 'No sketches yet. Tap + to create one!',
       filterPredicate: (sketch, query) {
         final titleMatch = sketch.title.toLowerCase().contains(query);
         final descMatch =

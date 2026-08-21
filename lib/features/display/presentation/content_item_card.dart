@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
 
+/// Wraps [child] in the swipe-to-archive + "currently showing" Card shared by
+/// every list-shaped display feature (sketch/image/text). Shape, elevation and
+/// border come from the global `CardThemeData` (see [AppTheme]) — this widget
+/// only overrides `color`/`shape` for the [isCurrent] state, it never hardcodes
+/// its own radius or elevation.
 class ContentItemCard extends StatelessWidget {
   const ContentItemCard({
     super.key,
@@ -22,6 +28,10 @@ class ContentItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final metrics = Theme.of(context).appMetrics;
+    final cardRadius = BorderRadius.circular(metrics.radiusDefault);
+
     return Dismissible(
       key: ValueKey(id),
       direction: DismissDirection.endToStart,
@@ -37,17 +47,23 @@ class ContentItemCard extends StatelessWidget {
           );
       },
       background: Container(
-        color: Colors.red,
+        color: colorScheme.error,
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: const Icon(Icons.delete_outline, color: Colors.white),
+        padding: EdgeInsets.symmetric(horizontal: metrics.spacingLg),
+        child: Icon(Icons.delete_outline, color: colorScheme.onError),
       ),
       child: Card(
-        clipBehavior: Clip.antiAlias,
-        color: isCurrent
-            ? Theme.of(context).colorScheme.primaryContainer
+        color: isCurrent ? colorScheme.inversePrimary : null,
+        // "Currently showing on screen" is Athletic Blue (both DESIGN_dark.md's
+        // and DESIGN_light.md's "Elevation & Depth": primary = "Work"/active
+        // states), overriding the theme's default subtle border.
+        shape: isCurrent
+            ? RoundedRectangleBorder(
+                borderRadius: cardRadius,
+                side: BorderSide(color: colorScheme.primary, width: 2),
+              )
             : null,
-        child: InkWell(onTap: onTap, child: child),
+        child: InkWell(borderRadius: cardRadius, onTap: onTap, child: child),
       ),
     );
   }

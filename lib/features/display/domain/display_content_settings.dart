@@ -15,6 +15,7 @@ enum DisplayContentType {
   timer,
   chrono,
   tabata,
+  training,
 }
 
 /// Represents the content settings for a display.

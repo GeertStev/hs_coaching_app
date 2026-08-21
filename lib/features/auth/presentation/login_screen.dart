@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/auth/presentation/auth_controller.dart';
 import 'package:hs_coaching_app/features/auth/presentation/auth_error_messages.dart';
 import 'package:hs_coaching_app/features/auth/presentation/signup_screen.dart';
@@ -96,12 +97,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(authControllerProvider).isLoading;
+    final metrics = Theme.of(context).appMetrics;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Inloggen')),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(metrics.spacingLg),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
             child: Form(
@@ -121,7 +123,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     autofillHints: const [AutofillHints.email],
                     textInputAction: TextInputAction.next,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: metrics.spacingMd),
                   TextFormField(
                     controller: _passwordController,
                     decoration: InputDecoration(
@@ -151,7 +153,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: const Text('Wachtwoord vergeten?'),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: metrics.spacingSm),
                   FilledButton(
                     onPressed: isLoading ? null : _login,
                     child: isLoading

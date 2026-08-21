@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
+import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_app/features/auth/data/auth_repository.dart';
 import 'package:hs_coaching_app/features/auth/domain/app_user.dart';
 

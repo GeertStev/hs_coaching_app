@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:hs_coaching_app/features/display/application/search_service.dart';
 import 'package:hs_coaching_app/features/display/features/image/data/display_image_repository.dart';
-import 'package:hs_coaching_app/features/display/features/image/domain/display_image.dart';
+import 'package:hs_coaching_core/image/display_image.dart';
 
 final allActiveImagesProvider =
     StreamProvider.family<List<DisplayImage>, String?>((ref, tag) {

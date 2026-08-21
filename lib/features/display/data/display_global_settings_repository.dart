@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
-import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
-import 'package:hs_coaching_app/features/display/domain/display_global_settings.dart';
+import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
+import 'package:hs_coaching_core/core/providers/display_device_ids_provider.dart';
+import 'package:hs_coaching_core/global_settings/display_global_settings.dart';
 
 /// Provider for the global settings repository.
 final displayGlobalSettingsRepositoryProvider =
@@ -76,11 +76,11 @@ final imageContentSizeProvider = Provider<Size?>((ref) {
 
   // These values represent the horizontal and vertical padding/margins
   // around the image content area on the display screen.
-  const double horizontalPadding = 12.0 * 2; // e.g., 12px on each side
-  const double verticalPadding = 12.0 + 42.0; // e.g., 12px top, 42px bottom
+  //const double horizontalPadding = 12.0 * 2; // e.g., 12px on each side
+  //const double verticalPadding = 12.0 + 42.0; // e.g., 12px top, 42px bottom
 
-  final contentWidth = settings.width - horizontalPadding;
-  final contentHeight = settings.height - verticalPadding;
+  final contentWidth = settings.contentWidth.toDouble(); // - horizontalPadding;
+  final contentHeight = settings.contentHeight.toDouble(); // - verticalPadding;
 
   return Size(contentWidth, contentHeight);
 });

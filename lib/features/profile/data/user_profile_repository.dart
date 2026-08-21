@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
+import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_app/features/auth/domain/app_user.dart';
 
 final userProfileRepositoryProvider = Provider<UserProfileRepository>((ref) {

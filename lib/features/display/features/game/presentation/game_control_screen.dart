@@ -25,7 +25,7 @@ class GameControlScreen extends ConsumerWidget {
 
     return ContentControlScreen(
       contentType: DisplayContentType.game,
-      contentList: gameSettings.when(
+      body: gameSettings.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
         data: (settings) {

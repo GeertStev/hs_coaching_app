@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
 
 class ReusableTagEditor extends StatefulWidget {
   const ReusableTagEditor({
@@ -56,6 +57,8 @@ class _ReusableTagEditorState extends State<ReusableTagEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final metrics = Theme.of(context).appMetrics;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -82,7 +85,6 @@ class _ReusableTagEditorState extends State<ReusableTagEditor> {
               decoration: InputDecoration(
                 labelText: 'Tags',
                 isDense: true,
-                border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.add),
                   onPressed: () => _addTag(controller.text),
@@ -96,19 +98,12 @@ class _ReusableTagEditorState extends State<ReusableTagEditor> {
             );
           },
         ),
-        if (_tags.isNotEmpty) const SizedBox(height: 16),
+        if (_tags.isNotEmpty) SizedBox(height: metrics.spacingMd),
 
         Wrap(
-          spacing: 6.0,
-          runSpacing: -2.0,
-
+          spacing: metrics.spacingSm,
           children: _tags.map((tag) {
-            return Chip(
-              label: Text(tag),
-              onDeleted: () => _removeTag(tag),
-              //labelPadding: const EdgeInsets.all(2),
-              //padding: const EdgeInsets.all(2),
-            );
+            return Chip(label: Text(tag), onDeleted: () => _removeTag(tag));
           }).toList(),
         ),
       ],

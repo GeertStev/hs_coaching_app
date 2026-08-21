@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/core/theme/app_metrics.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/display/features/tag_and_search/presentation/tag_editor.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
 
@@ -70,13 +72,17 @@ class _ContentEditSheetState extends ConsumerState<ContentEditSheet> {
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
+    final metrics = Theme.of(context).appMetrics;
 
     return Padding(
       padding: EdgeInsets.only(
-        top: 24,
-        left: 24,
-        right: 24,
-        bottom: mediaQuery.viewInsets.bottom + mediaQuery.padding.bottom + 16,
+        top: metrics.spacingLg,
+        left: metrics.spacingLg,
+        right: metrics.spacingLg,
+        bottom:
+            mediaQuery.viewInsets.bottom +
+            mediaQuery.padding.bottom +
+            metrics.spacingMd,
       ),
       child: Form(
         key: _formKey,
@@ -88,7 +94,7 @@ class _ContentEditSheetState extends ConsumerState<ContentEditSheet> {
               widget.dialogTitle,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: metrics.spacingLg),
             Flexible(
               child: SingleChildScrollView(
                 child: Column(
@@ -102,7 +108,6 @@ class _ContentEditSheetState extends ConsumerState<ContentEditSheet> {
                       decoration: const InputDecoration(
                         labelText: 'Title',
                         isDense: true,
-                        border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -111,7 +116,7 @@ class _ContentEditSheetState extends ConsumerState<ContentEditSheet> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: metrics.spacingMd),
                     TextFormField(
                       controller: _descriptionController,
                       autofocus: false,
@@ -119,34 +124,32 @@ class _ContentEditSheetState extends ConsumerState<ContentEditSheet> {
                       decoration: const InputDecoration(
                         isDense: true,
                         labelText: 'Description',
-                        border: OutlineInputBorder(),
                       ),
                       minLines: 2,
                       maxLines: 4,
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: metrics.spacingMd),
                     ReusableTagEditor(
                       initialTags: _tags,
                       allTags: widget.allTags,
                       onTagsChanged: (updatedTags) => _tags = updatedTags,
                     ),
-                    const SizedBox(height: 16),
-                    //widget.contentSpecificWidget,
+                    SizedBox(height: metrics.spacingMd),
                     if (widget.contentSpecificWidget != null)
-                      widget.contentSpecificWidget!, // <-- Voeg null-check toe
+                      widget.contentSpecificWidget!,
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            _buildActions(),
+            SizedBox(height: metrics.spacingLg),
+            _buildActions(metrics),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActions() {
+  Widget _buildActions(AppMetrics metrics) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
@@ -154,14 +157,14 @@ class _ContentEditSheetState extends ConsumerState<ContentEditSheet> {
           onPressed: () => _submit(DialogAction.cancel),
           child: const Text('Cancel'),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: metrics.spacingSm),
         if (widget.isNewItem) ...[
           if (widget.showSecondaryAction) ...[
             TextButton(
               onPressed: () => _submit(DialogAction.addToList),
               child: const Text('Add to List'),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: metrics.spacingSm),
           ],
           FilledButton(
             onPressed: () => _submit(DialogAction.display),
@@ -173,7 +176,7 @@ class _ContentEditSheetState extends ConsumerState<ContentEditSheet> {
               onPressed: () => _submit(DialogAction.copy),
               child: const Text('Save a Copy'),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: metrics.spacingSm),
           ],
           FilledButton(
             onPressed: () => _submit(DialogAction.save),

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 //import 'dart:ui' as ui;
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
+import 'package:hs_coaching_core/sketch/sketch_element.dart';
 
 class SketchPainter extends CustomPainter {
   const SketchPainter({

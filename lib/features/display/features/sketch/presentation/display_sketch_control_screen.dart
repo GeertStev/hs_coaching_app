@@ -82,10 +82,12 @@ class _SketchControlScreenState extends ConsumerState<SketchControlScreen> {
       }
     });
     return ContentControlScreen(
-      contentList: const SketchList(),
-      onAdd: _createNewSketch,
-      addIcon: Icons.add,
-      addTooltip: 'New Sketch',
+      body: const SketchList(),
+      addAction: (
+        icon: Icons.add,
+        tooltip: 'New Sketch',
+        onPressed: _createNewSketch,
+      ),
       contentType: DisplayContentType.sketch,
     );
   }

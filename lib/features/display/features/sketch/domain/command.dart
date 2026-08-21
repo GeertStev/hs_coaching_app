@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_data_providers.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
+import 'package:hs_coaching_core/sketch/sketch_element.dart';
 
 /// The Command Interface that all command classes will implement.
 abstract class Command {

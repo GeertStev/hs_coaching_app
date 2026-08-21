@@ -78,10 +78,12 @@ class _TextControlScreenState extends ConsumerState<TextControlScreen> {
     });
 
     return ContentControlScreen(
-      contentList: const TextList(),
-      onAdd: _showAddTextSheet,
-      addIcon: Icons.add,
-      addTooltip: 'Add Text',
+      body: const TextList(),
+      addAction: (
+        icon: Icons.add,
+        tooltip: 'Add Text',
+        onPressed: _showAddTextSheet,
+      ),
       contentType: DisplayContentType.text,
     );
   }

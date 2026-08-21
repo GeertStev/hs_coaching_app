@@ -65,10 +65,12 @@ class ImageControlScreen extends ConsumerWidget {
     }
 
     return ContentControlScreen(
-      contentList: const ImageList(),
-      onAdd: handleAddImage,
-      addIcon: Icons.add_a_photo_outlined,
-      addTooltip: 'Add Image',
+      body: const ImageList(),
+      addAction: (
+        icon: Icons.add_a_photo_outlined,
+        tooltip: 'Add Image',
+        onPressed: handleAddImage,
+      ),
       contentType: DisplayContentType.image,
     );
   }

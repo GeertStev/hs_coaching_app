@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/features/text/data/display_text_providers.dart';
-import 'package:hs_coaching_app/features/display/features/text/domain/display_text.dart';
 import 'package:hs_coaching_app/features/display/features/text/presentation/display_text_controller.dart';
+import 'package:hs_coaching_core/text/display_text.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog_parts.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_item_card.dart';

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/club/data/club_providers.dart';
 import 'package:hs_coaching_app/features/club/domain/club_membership.dart';
 import 'package:hs_coaching_app/features/club/domain/club_team.dart';
@@ -24,6 +25,7 @@ class ClubManageScreen extends ConsumerWidget {
             ?.where((m) => m.isPending)
             .length ??
         0;
+    final metrics = Theme.of(context).appMetrics;
 
     return DefaultTabController(
       length: 4,
@@ -40,7 +42,7 @@ class ClubManageScreen extends ConsumerWidget {
                   children: [
                     const Text('Aanvragen'),
                     if (pendingCount > 0) ...[
-                      const SizedBox(width: 6),
+                      SizedBox(width: metrics.spacingXs),
                       Badge(label: Text('$pendingCount')),
                     ],
                   ],
@@ -101,7 +103,7 @@ class _MembersTab extends ConsumerWidget {
           return const Center(child: Text('Nog geen actieve leden.'));
         }
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(Theme.of(context).appMetrics.spacingMd),
           itemCount: active.length,
           itemBuilder: (context, index) {
             final member = active[index];
@@ -217,6 +219,7 @@ class _EditMemberDialogState extends ConsumerState<_EditMemberDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final metrics = Theme.of(context).appMetrics;
     return AlertDialog(
       title: Text(widget.member.fullName),
       content: SingleChildScrollView(
@@ -234,12 +237,12 @@ class _EditMemberDialogState extends ConsumerState<_EditMemberDialog> {
               onChanged: (role) =>
                   setState(() => _role = role ?? ClubRole.player),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: metrics.spacingMd),
             Text('Ploegen', style: Theme.of(context).textTheme.titleSmall),
             if (widget.teams.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text('Nog geen ploegen. Maak eerst een ploeg aan.'),
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: metrics.spacingSm),
+                child: const Text('Nog geen ploegen. Maak eerst een ploeg aan.'),
               ),
             for (final team in widget.teams)
               CheckboxListTile(
@@ -295,8 +298,10 @@ class _RequestsTab extends ConsumerWidget {
         if (pending.isEmpty) {
           return const Center(child: Text('Geen openstaande aanvragen.'));
         }
+        final metrics = Theme.of(context).appMetrics;
+        final colorScheme = Theme.of(context).colorScheme;
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(metrics.spacingMd),
           itemCount: pending.length,
           itemBuilder: (context, index) {
             final member = pending[index];
@@ -318,7 +323,7 @@ class _RequestsTab extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red),
+                      icon: Icon(Icons.close, color: colorScheme.error),
                       tooltip: 'Weigeren',
                       onPressed: () async {
                         final ok = await ref
@@ -335,7 +340,9 @@ class _RequestsTab extends ConsumerWidget {
                       },
                     ),
                     IconButton(
-                      icon: const Icon(Icons.check, color: Colors.green),
+                      // Geen groen in DESIGN.md: primary (Athletic Blue) is de
+                      // enige "positieve" merkkleur, in plaats van generiek groen.
+                      icon: Icon(Icons.check, color: colorScheme.primary),
                       tooltip: 'Goedkeuren',
                       onPressed: () async {
                         final ok = await ref
@@ -461,7 +468,7 @@ class _TeamsTab extends ConsumerWidget {
             );
           }
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(Theme.of(context).appMetrics.spacingMd),
             itemCount: teams.length,
             itemBuilder: (context, index) {
               final team = teams[index];
@@ -544,11 +551,13 @@ class _InvitesTab extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text(clubErrorMessage(err))),
         data: (invites) {
+          final metrics = Theme.of(context).appMetrics;
+          final colorScheme = Theme.of(context).colorScheme;
           if (invites.isEmpty) {
-            return const Center(
+            return Center(
               child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
+                padding: EdgeInsets.all(metrics.spacingLg),
+                child: const Text(
                   'Nog geen uitnodigingen.\nMaak een code aan en deel die met '
                   'nieuwe leden: zij treden dan direct toe zonder goedkeuring.',
                   textAlign: TextAlign.center,
@@ -557,7 +566,7 @@ class _InvitesTab extends ConsumerWidget {
             );
           }
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(metrics.spacingMd),
             itemCount: invites.length,
             itemBuilder: (context, index) {
               final invite = invites[index];
@@ -565,13 +574,18 @@ class _InvitesTab extends ConsumerWidget {
                 child: ListTile(
                   leading: Icon(
                     Icons.key_outlined,
-                    color: invite.isUsable ? Colors.green : Colors.grey,
+                    // Geen groen in DESIGN.md: primary voor "bruikbaar",
+                    // onSurfaceVariant (neutraal gedimd) i.p.v. generiek grijs.
+                    color: invite.isUsable
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
                   ),
                   title: SelectableText(
                     invite.code,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontWeight: FontWeight.bold,
+                    // DESIGN.md "data-point": JetBrains Mono voor technische
+                    // waarden, i.p.v. het generieke OS-'monospace'-font.
+                    style: Theme.of(context).appTypography.dataPoint.copyWith(
+                      fontWeight: FontWeight.w700,
                       letterSpacing: 2,
                     ),
                   ),
@@ -666,6 +680,7 @@ class _CreateInviteDialogState extends State<_CreateInviteDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final metrics = Theme.of(context).appMetrics;
     return AlertDialog(
       title: const Text('Nieuwe uitnodiging'),
       content: Column(
@@ -682,7 +697,7 @@ class _CreateInviteDialogState extends State<_CreateInviteDialog> {
             ],
             onChanged: (role) => setState(() => _role = role ?? ClubRole.player),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: metrics.spacingMd),
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Vervaldatum'),

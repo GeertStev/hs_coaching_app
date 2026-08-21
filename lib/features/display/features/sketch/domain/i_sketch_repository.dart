@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_background.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
+import 'package:hs_coaching_core/sketch/sketch.dart';
+import 'package:hs_coaching_core/sketch/sketch_background.dart';
+import 'package:hs_coaching_core/sketch/sketch_element.dart';
 
 abstract class ISketchRepository {
   /// Streamed de realtime elementen van een specifieke sketch.

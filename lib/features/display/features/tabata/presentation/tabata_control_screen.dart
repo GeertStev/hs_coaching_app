@@ -2,13 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
 import 'package:hs_coaching_app/features/display/features/tabata/data/tabata_provider.dart';
-import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata.dart';
-import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_exercise.dart';
-import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_group.dart';
-import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_item.dart';
-import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_item_tree.dart';
 import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_preset.dart';
-import 'package:hs_coaching_app/features/display/features/tabata/domain/tabata_progress.dart';
+import 'package:hs_coaching_core/tabata/tabata.dart';
+import 'package:hs_coaching_core/tabata/tabata_progress.dart';
 import 'package:hs_coaching_app/features/display/features/tabata/presentation/tabata_screen_controller.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
 
@@ -21,7 +17,7 @@ class TabataControlScreen extends ConsumerWidget {
 
     return ContentControlScreen(
       contentType: DisplayContentType.tabata,
-      contentList: tabataAsync.when(
+      body: tabataAsync.when(
         data: (tabata) => _TabataView(tabata: tabata),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) =>
@@ -93,6 +89,7 @@ class _TabataConfigView extends StatelessWidget {
   }
 }
 
+/// Minimale editor: work/rest/rounds/sets, geen kaarten, geen slepen.
 class _EditorTab extends ConsumerWidget {
   const _EditorTab({required this.tabata});
   final Tabata tabata;
@@ -100,85 +97,156 @@ class _EditorTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final commands = ref.read(tabataCommandsProvider);
-    final items = tabata.items;
 
-    Future<void> updateItems(List<TabataItem> newItems) {
-      return commands.updateConfig(tabata.copyWith(items: newItems));
+    Future<void> update(Tabata Function(Tabata current) transform) {
+      return commands.updateConfig(transform(tabata));
     }
-
-    void onChangeExercise(TabataExercise updated) =>
-        updateItems(replaceExercise(items, updated));
-    void onChangeGroup(TabataGroup updated) =>
-        updateItems(replaceGroup(items, updated));
-    void onDeleteId(String id) => updateItems(removeItem(items, id));
 
     return Stack(
       children: [
         ListView(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
-            const _ColumnHeaders(),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ActionChip(
-                avatar: const Icon(Icons.accessibility_new, size: 16),
-                label: Text('Prepare ${_formatSeconds(tabata.prepareSeconds)}'),
-                onPressed: () async {
-                  final result = await _showStepperDialog(
-                    context,
-                    title: 'Prepare',
-                    initial: tabata.prepareSeconds,
-                    step: 5,
-                    min: 0,
-                    max: 120,
-                    format: _formatSeconds,
-                  );
-                  if (result != null) {
-                    await commands.updateConfig(
-                      tabata.copyWith(prepareSeconds: result),
-                    );
-                  }
-                },
-              ),
+            _ConfigRow(
+              label: 'Prepare',
+              value: _formatSeconds(tabata.prepareSeconds),
+              onTap: () async {
+                final result = await _showStepperDialog(
+                  context,
+                  title: 'Prepare',
+                  initial: tabata.prepareSeconds,
+                  step: 5,
+                  min: 0,
+                  max: 120,
+                  format: _formatSeconds,
+                );
+                if (result != null) {
+                  await update((t) => t.copyWith(prepareSeconds: result));
+                }
+              },
             ),
-            const SizedBox(height: 12),
-            if (items.isEmpty)
-              _EmptyInsert(
-                onInsert: () =>
-                    updateItems(insertExercise(items, 0, newTabataExercise())),
-              ),
-            for (var i = 0; i < items.length; i++) ...[
-              _TopLevelItemCard(
-                item: items[i],
-                onChangeExercise: onChangeExercise,
-                onChangeGroup: onChangeGroup,
-                onDeleteId: onDeleteId,
-                onDropGroup: (draggedId) =>
-                    updateItems(groupWithTarget(items, draggedId, items[i].id)),
-              ),
-              _InsertGap(
-                targetIndex: i + 1,
-                restAfter: items[i].restAfter,
-                showRestPill: i < items.length - 1,
-                onInsert: () =>
-                    updateItems(insertExercise(items, i + 1, newTabataExercise())),
-                onEditRest: (value) => updateItems(
-                  switch (items[i]) {
-                    TabataItemExercise(:final exercise) => replaceExercise(
-                      items,
-                      exercise.copyWith(restAfter: value),
-                    ),
-                    TabataItemGroup(:final group) => replaceGroup(
-                      items,
-                      group.copyWith(restAfter: value),
-                    ),
-                  },
-                ),
-                onDropReorder: (draggedId) =>
-                    updateItems(moveItem(items, draggedId, i + 1)),
-              ),
-            ],
+            _ConfigRow(
+              label: 'Work',
+              value: _formatSeconds(tabata.workSeconds),
+              color: Colors.deepOrange,
+              onTap: () async {
+                final result = await _showStepperDialog(
+                  context,
+                  title: 'Work',
+                  initial: tabata.workSeconds,
+                  step: 5,
+                  min: 5,
+                  max: 600,
+                  format: _formatSeconds,
+                );
+                if (result != null) {
+                  await update((t) => t.copyWith(workSeconds: result));
+                }
+              },
+            ),
+            _ConfigRow(
+              label: 'Rest (between rounds)',
+              value: _formatSeconds(tabata.restSeconds),
+              color: Colors.green,
+              onTap: () async {
+                final result = await _showStepperDialog(
+                  context,
+                  title: 'Rest (between rounds)',
+                  initial: tabata.restSeconds,
+                  step: 5,
+                  min: 0,
+                  max: 600,
+                  format: _formatSeconds,
+                );
+                if (result != null) {
+                  await update((t) => t.copyWith(restSeconds: result));
+                }
+              },
+            ),
+            _ConfigRow(
+              label: 'Step per round\n(+ = longer, - = shorter)',
+              value: _formatStep(tabata.stepSeconds),
+              color: tabata.stepSeconds == 0
+                  ? null
+                  : (tabata.stepSeconds < 0
+                        ? Colors.deepOrange
+                        : Colors.green),
+              onTap: () async {
+                final result = await _showStepperDialog(
+                  context,
+                  title: 'Step per round\n(+ = longer, - = shorter)',
+                  initial: tabata.stepSeconds,
+                  step: 1,
+                  min: -60,
+                  max: 60,
+                  format: _formatStep,
+                );
+                if (result != null) {
+                  await update((t) => t.copyWith(stepSeconds: result));
+                }
+              },
+            ),
+            _ConfigRow(
+              label: 'Rounds',
+              value: '${tabata.rounds}x',
+              onTap: () async {
+                final result = await _showStepperDialog(
+                  context,
+                  title: 'Rounds',
+                  initial: tabata.rounds,
+                  step: 1,
+                  min: 1,
+                  max: 50,
+                  format: (v) => '$v',
+                );
+                if (result != null) {
+                  await update((t) => t.copyWith(rounds: result));
+                }
+              },
+            ),
+            _ConfigRow(
+              label: 'Sets',
+              value: '${tabata.sets}x',
+              onTap: () async {
+                final result = await _showStepperDialog(
+                  context,
+                  title: 'Sets',
+                  initial: tabata.sets,
+                  step: 1,
+                  min: 1,
+                  max: 20,
+                  format: (v) => '$v',
+                );
+                if (result != null) {
+                  await update((t) => t.copyWith(sets: result));
+                }
+              },
+            ),
+            _ConfigRow(
+              label: 'Rest between sets',
+              value: _formatSeconds(tabata.restBetweenSets),
+              color: Colors.teal,
+              onTap: () async {
+                final result = await _showStepperDialog(
+                  context,
+                  title: 'Rest between sets',
+                  initial: tabata.restBetweenSets,
+                  step: 5,
+                  min: 0,
+                  max: 900,
+                  format: _formatSeconds,
+                );
+                if (result != null) {
+                  await update((t) => t.copyWith(restBetweenSets: result));
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Total: ${_formatSeconds(tabata.totalDurationMillis ~/ 1000)}',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
         Positioned(
@@ -192,406 +260,41 @@ class _EditorTab extends ConsumerWidget {
   }
 }
 
-class _ColumnHeaders extends StatelessWidget {
-  const _ColumnHeaders();
+/// Eén rij in de minimale editor: label links, tikbare pill-waarde rechts.
+class _ConfigRow extends StatelessWidget {
+  const _ConfigRow({
+    required this.label,
+    required this.value,
+    required this.onTap,
+    this.color,
+  });
+
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
-      fontWeight: FontWeight.bold,
-      letterSpacing: 0.5,
-      color: Theme.of(context).colorScheme.outline,
-    );
-    Widget label(String text) => Expanded(
-      child: Center(child: Text(text, style: style)),
-    );
     return Padding(
-      padding: const EdgeInsets.only(left: 44, right: 36),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          label('ROUNDS'),
-          const SizedBox(width: 6),
-          label('WORK'),
-          const SizedBox(width: 6),
-          label('REST'),
-          const SizedBox(width: 6),
-          label('STEP'),
+          Expanded(
+            child: Text(label, style: Theme.of(context).textTheme.bodyLarge),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 96,
+            child: _Pill(label: value, color: color, onTap: onTap),
+          ),
         ],
       ),
     );
   }
 }
 
-/// Een top-level kaart (losse oefening of groep) met slepen-om-te-groeperen:
-/// droppen op de body van deze kaart voegt de gesleepte oefening toe aan een
-/// (nieuwe of bestaande) groep.
-class _TopLevelItemCard extends StatelessWidget {
-  const _TopLevelItemCard({
-    required this.item,
-    required this.onChangeExercise,
-    required this.onChangeGroup,
-    required this.onDeleteId,
-    required this.onDropGroup,
-  });
-
-  final TabataItem item;
-  final ValueChanged<TabataExercise> onChangeExercise;
-  final ValueChanged<TabataGroup> onChangeGroup;
-  final ValueChanged<String> onDeleteId;
-  final ValueChanged<String> onDropGroup;
-
-  @override
-  Widget build(BuildContext context) {
-    return DragTarget<String>(
-      onWillAcceptWithDetails: (details) => details.data != item.id,
-      onAcceptWithDetails: (details) => onDropGroup(details.data),
-      builder: (context, candidateData, rejectedData) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 4),
-          color: candidateData.isNotEmpty
-              ? Theme.of(context).colorScheme.primaryContainer
-              : null,
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: switch (item) {
-              TabataItemExercise(:final exercise) => _ExerciseCardView(
-                exercise: exercise,
-                onChanged: onChangeExercise,
-                onDelete: () => onDeleteId(exercise.id),
-              ),
-              TabataItemGroup(:final group) => _GroupCardView(
-                group: group,
-                onChangeGroup: onChangeGroup,
-                onChangeExercise: onChangeExercise,
-                onDeleteId: onDeleteId,
-              ),
-            },
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _GroupCardView extends StatelessWidget {
-  const _GroupCardView({
-    required this.group,
-    required this.onChangeGroup,
-    required this.onChangeExercise,
-    required this.onDeleteId,
-  });
-
-  final TabataGroup group;
-  final ValueChanged<TabataGroup> onChangeGroup;
-  final ValueChanged<TabataExercise> onChangeExercise;
-  final ValueChanged<String> onDeleteId;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            _DragHandle(id: group.id),
-            const SizedBox(width: 8),
-            Expanded(
-              child: GestureDetector(
-                onTap: () async {
-                  final title = await _showTitleDialog(
-                    context,
-                    title: 'Naam groep',
-                    initial: group.title,
-                  );
-                  if (title != null) onChangeGroup(group.copyWith(title: title));
-                },
-                child: Text(
-                  group.title.isEmpty ? 'Groep' : group.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            SizedBox(
-              width: 60,
-              child: _Pill(
-                label: '${group.rounds}x',
-                onTap: () async {
-                  final value = await _showStepperDialog(
-                    context,
-                    title: 'Herhalingen van de groep',
-                    initial: group.rounds,
-                    step: 1,
-                    min: 1,
-                    max: 50,
-                    format: (v) => '$v',
-                  );
-                  if (value != null) {
-                    onChangeGroup(group.copyWith(rounds: value));
-                  }
-                },
-              ),
-            ),
-            const SizedBox(width: 6),
-            SizedBox(
-              width: 72,
-              child: _Pill(
-                label: _formatSeconds(group.restBetweenRepeats),
-                color: Colors.green,
-                onTap: () async {
-                  final value = await _showStepperDialog(
-                    context,
-                    title: 'Rust tussen herhalingen',
-                    initial: group.restBetweenRepeats,
-                    step: 5,
-                    min: 0,
-                    max: 600,
-                    format: _formatSeconds,
-                  );
-                  if (value != null) {
-                    onChangeGroup(group.copyWith(restBetweenRepeats: value));
-                  }
-                },
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close, size: 18),
-              visualDensity: VisualDensity.compact,
-              onPressed: () => onDeleteId(group.id),
-            ),
-          ],
-        ),
-        const Divider(height: 16),
-        for (var i = 0; i < group.children.length; i++) ...[
-          Padding(
-            padding: const EdgeInsets.only(left: 16),
-            child: _ExerciseCardView(
-              exercise: group.children[i],
-              nested: true,
-              onChanged: onChangeExercise,
-              onDelete: () => onDeleteId(group.children[i].id),
-            ),
-          ),
-          if (i < group.children.length - 1)
-            Padding(
-              padding: const EdgeInsets.only(left: 40, bottom: 4),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: ActionChip(
-                  avatar: const Icon(Icons.pause_circle_outline, size: 16),
-                  label: Text(_formatSeconds(group.children[i].restAfter)),
-                  onPressed: () async {
-                    final child = group.children[i];
-                    final value = await _showStepperDialog(
-                      context,
-                      title: 'Rust tot volgende oefening',
-                      initial: child.restAfter,
-                      step: 5,
-                      min: 0,
-                      max: 600,
-                      format: _formatSeconds,
-                    );
-                    if (value != null) {
-                      onChangeExercise(child.copyWith(restAfter: value));
-                    }
-                  },
-                ),
-              ),
-            ),
-        ],
-      ],
-    );
-  }
-}
-
-/// De inhoud van één oefening-kaart: sleephandvat, titel en de 4 kolommen
-/// (rondes/werk/rust/stap). Wordt zowel top-level als genest (in een groep)
-/// gebruikt — [nested] bepaalt enkel de visuele weging.
-class _ExerciseCardView extends StatelessWidget {
-  const _ExerciseCardView({
-    required this.exercise,
-    required this.onChanged,
-    required this.onDelete,
-    this.nested = false,
-  });
-
-  final TabataExercise exercise;
-  final ValueChanged<TabataExercise> onChanged;
-  final VoidCallback onDelete;
-  final bool nested;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _DragHandle(id: exercise.id),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () async {
-                        final title = await _showTitleDialog(
-                          context,
-                          title: 'Naam oefening',
-                          initial: exercise.title,
-                        );
-                        if (title != null) {
-                          onChanged(exercise.copyWith(title: title));
-                        }
-                      },
-                      child: Text(
-                        exercise.title.isEmpty
-                            ? (nested ? 'Oefening' : 'Exercise')
-                            : exercise.title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: nested ? 14 : 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 18),
-                    visualDensity: VisualDensity.compact,
-                    onPressed: onDelete,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Expanded(
-                    child: _Pill(
-                      label: '${exercise.rounds}x',
-                      onTap: () async {
-                        final value = await _showStepperDialog(
-                          context,
-                          title: 'Rondes',
-                          initial: exercise.rounds,
-                          step: 1,
-                          min: 1,
-                          max: 50,
-                          format: (v) => '$v',
-                        );
-                        if (value != null) {
-                          onChanged(exercise.copyWith(rounds: value));
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _Pill(
-                      label: _formatSeconds(exercise.workSeconds),
-                      color: Colors.deepOrange,
-                      onTap: () async {
-                        final value = await _showStepperDialog(
-                          context,
-                          title: 'Werk',
-                          initial: exercise.workSeconds,
-                          step: 5,
-                          min: 5,
-                          max: 600,
-                          format: _formatSeconds,
-                        );
-                        if (value != null) {
-                          onChanged(exercise.copyWith(workSeconds: value));
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _Pill(
-                      label: _formatSeconds(exercise.restSeconds),
-                      onTap: () async {
-                        final value = await _showStepperDialog(
-                          context,
-                          title: 'Rust (tussen rondes)',
-                          initial: exercise.restSeconds,
-                          step: 5,
-                          min: 0,
-                          max: 600,
-                          format: _formatSeconds,
-                        );
-                        if (value != null) {
-                          onChanged(exercise.copyWith(restSeconds: value));
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _Pill(
-                      label: _formatStep(exercise.stepSeconds),
-                      color: exercise.stepSeconds == 0
-                          ? null
-                          : (exercise.stepSeconds < 0
-                                ? Colors.deepOrange
-                                : Colors.green),
-                      onTap: () async {
-                        final value = await _showStepperDialog(
-                          context,
-                          title: 'Stap per ronde\n(+ = langer, - = korter)',
-                          initial: exercise.stepSeconds,
-                          step: 1,
-                          min: -60,
-                          max: 60,
-                          format: _formatStep,
-                        );
-                        if (value != null) {
-                          onChanged(exercise.copyWith(stepSeconds: value));
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Sleephandvat: lang indrukken en verslepen om te herordenen of te
-/// groeperen (zie [_InsertGap] resp. [_TopLevelItemCard]).
-class _DragHandle extends StatelessWidget {
-  const _DragHandle({required this.id});
-  final String id;
-
-  @override
-  Widget build(BuildContext context) {
-    const icon = Icon(Icons.drag_indicator, color: Colors.grey);
-    return LongPressDraggable<String>(
-      data: id,
-      feedback: Material(
-        elevation: 4,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: icon,
-        ),
-      ),
-      childWhenDragging: const Opacity(opacity: 0.3, child: icon),
-      child: icon,
-    );
-  }
-}
-
-/// Klein tikbaar label (kolomwaarde). [color] geeft een subtiele
+/// Klein tikbaar label (waarde-pill). [color] geeft een subtiele
 /// accentkleur (bv. werktijd, of stap-richting); zonder kleur is de pill
 /// neutraal.
 class _Pill extends StatelessWidget {
@@ -633,101 +336,9 @@ class _Pill extends StatelessWidget {
   }
 }
 
-/// Subtiele "+" om een nieuwe kaart in te voegen, met (indien niet de
-/// laatste kaart) de rust tot de volgende kaart als tikbare pill, uitgelijnd
-/// met de kaartinhoud. Zelf ook een dropzone: droppen hier herordent de
-/// gesleepte kaart naar deze positie (in plaats van te groeperen).
-class _InsertGap extends StatelessWidget {
-  const _InsertGap({
-    required this.targetIndex,
-    required this.restAfter,
-    required this.showRestPill,
-    required this.onInsert,
-    required this.onEditRest,
-    required this.onDropReorder,
-  });
-
-  final int targetIndex;
-  final int restAfter;
-  final bool showRestPill;
-  final VoidCallback onInsert;
-  final ValueChanged<int> onEditRest;
-  final ValueChanged<String> onDropReorder;
-
-  @override
-  Widget build(BuildContext context) {
-    return DragTarget<String>(
-      onAcceptWithDetails: (details) => onDropReorder(details.data),
-      builder: (context, candidateData, rejectedData) {
-        return Container(
-          color: candidateData.isNotEmpty
-              ? Theme.of(
-                  context,
-                ).colorScheme.primaryContainer.withValues(alpha: 0.4)
-              : null,
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.add_circle_outline, size: 20),
-                color: Colors.grey,
-                visualDensity: VisualDensity.compact,
-                tooltip: 'Oefening invoegen',
-                onPressed: onInsert,
-              ),
-              const Spacer(),
-              if (showRestPill)
-                ActionChip(
-                  avatar: const Icon(Icons.pause_circle_outline, size: 16),
-                  label: Text(_formatSeconds(restAfter)),
-                  onPressed: () async {
-                    final value = await _showStepperDialog(
-                      context,
-                      title: 'Rust tot volgende kaart',
-                      initial: restAfter,
-                      step: 5,
-                      min: 0,
-                      max: 600,
-                      format: _formatSeconds,
-                    );
-                    if (value != null) onEditRest(value);
-                  },
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// "+" om de allereerste kaart toe te voegen wanneer er nog geen enkele
-/// oefening is (geen rust-pill of dropzone nodig: er is niets om tussen te
-/// rusten of naartoe te herordenen).
-class _EmptyInsert extends StatelessWidget {
-  const _EmptyInsert({required this.onInsert});
-  final VoidCallback onInsert;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: IconButton(
-          icon: const Icon(Icons.add_circle_outline, size: 40),
-          color: Colors.grey,
-          tooltip: 'Oefening toevoegen',
-          onPressed: onInsert,
-        ),
-      ),
-    );
-  }
-}
-
 /// Zwevende start-knop onderaan het scherm: pint aan de onderkant met een
-/// vervagende achtergrond, zodat de oefeningen die er onder scrollen niet
-/// hard afgesneden worden, en overlapt de kaartenlijst nooit (de `ListView`
-/// erboven heeft daarvoor extra bottom-padding).
+/// vervagende achtergrond, zodat de instelrijen die er onder scrollen niet
+/// hard afgesneden worden.
 class _FloatingStartBar extends ConsumerWidget {
   const _FloatingStartBar({required this.tabata});
   final Tabata tabata;
@@ -735,6 +346,8 @@ class _FloatingStartBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    final canStart =
+        tabata.workSeconds > 0 && tabata.rounds > 0 && tabata.sets > 0;
     return IgnorePointer(
       ignoring: false,
       child: Container(
@@ -749,9 +362,9 @@ class _FloatingStartBar extends ConsumerWidget {
         child: SizedBox(
           height: 54,
           child: ElevatedButton.icon(
-            onPressed: tabata.items.isEmpty
-                ? null
-                : () => ref.read(tabataCommandsProvider).start(tabata),
+            onPressed: canStart
+                ? () => ref.read(tabataCommandsProvider).start(tabata)
+                : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
@@ -800,7 +413,7 @@ class _ListTab extends ConsumerWidget {
                   initial: '',
                 );
                 if (title == null || title.isEmpty) return;
-                await commands.savePreset(title, tabata.items);
+                await commands.savePreset(title, tabata);
               },
               icon: const Icon(Icons.save_outlined),
               label: const Text('Huidige sessie bewaren'),
@@ -822,7 +435,12 @@ class _ListTab extends ConsumerWidget {
                   final preset = presets[index];
                   final durationMillis = Tabata(
                     prepareSeconds: 0,
-                    items: preset.items,
+                    workSeconds: preset.workSeconds,
+                    restSeconds: preset.restSeconds,
+                    stepSeconds: preset.stepSeconds,
+                    rounds: preset.rounds,
+                    sets: preset.sets,
+                    restBetweenSets: preset.restBetweenSets,
                   ).totalDurationMillis;
                   return Card(
                     child: ListTile(
@@ -831,12 +449,19 @@ class _ListTab extends ConsumerWidget {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
-                        '${preset.items.length} kaart(en) · '
+                        '${preset.rounds} rondes × ${preset.sets} sets · '
                         '${_formatSeconds(durationMillis ~/ 1000)} totaal',
                       ),
                       onTap: () async {
                         await commands.updateConfig(
-                          tabata.copyWith(items: preset.items),
+                          tabata.copyWith(
+                            workSeconds: preset.workSeconds,
+                            restSeconds: preset.restSeconds,
+                            stepSeconds: preset.stepSeconds,
+                            rounds: preset.rounds,
+                            sets: preset.sets,
+                            restBetweenSets: preset.restBetweenSets,
+                          ),
                         );
                         if (context.mounted) {
                           DefaultTabController.of(context).animateTo(0);
@@ -860,8 +485,7 @@ class _ListTab extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) =>
-                Center(child: Text('Fout bij laden: $err')),
+            error: (err, stack) => Center(child: Text('Fout bij laden: $err')),
           ),
         ),
       ],
@@ -1028,7 +652,7 @@ class _TabataRunView extends ConsumerWidget {
     TabataPhase.prepare: Colors.lightBlue,
     TabataPhase.work: Colors.deepOrange,
     TabataPhase.rest: Colors.green,
-    TabataPhase.setRest: Colors.teal,
+    TabataPhase.restBetweenSets: Colors.teal,
     TabataPhase.finished: Colors.blueGrey,
   };
 
@@ -1036,7 +660,7 @@ class _TabataRunView extends ConsumerWidget {
     TabataPhase.prepare: 'Voorbereiden',
     TabataPhase.work: 'Werk',
     TabataPhase.rest: 'Rust',
-    TabataPhase.setRest: 'Setrust',
+    TabataPhase.restBetweenSets: 'Setrust',
     TabataPhase.finished: 'Klaar!',
   };
 
@@ -1060,26 +684,15 @@ class _TabataRunView extends ConsumerWidget {
         children: [
           const Spacer(),
 
-          // Titel en nummer van de huidige kaart
-          if (progress.itemTitle.isNotEmpty || progress.totalItems > 1) ...[
+          // Setnummer, enkel zinvol bij meer dan 1 set
+          if (progress.totalSets > 1) ...[
             Text(
-              progress.itemTitle.isNotEmpty ? progress.itemTitle : 'Tabata',
+              'Set ${progress.set} of ${progress.totalSets}',
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
-            if (progress.totalItems > 1)
-              Text(
-                'Kaart ${progress.itemIndex} van ${progress.totalItems}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            if (progress.groupRepeat != null)
-              Text(
-                'Herhaling ${progress.groupRepeat} van '
-                '${progress.totalGroupRepeats}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
             const SizedBox(height: 16),
           ],
 
@@ -1101,7 +714,7 @@ class _TabataRunView extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Ronde ${progress.round}/${progress.totalRounds}',
+                      'Round ${progress.round}/${progress.totalRounds}',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Text(

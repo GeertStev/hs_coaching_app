@@ -2,78 +2,27 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/i_sketch_repository.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_background.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
+import 'package:hs_coaching_core/sketch/sketch.dart';
+import 'package:hs_coaching_core/sketch/sketch_background.dart';
+import 'package:hs_coaching_core/sketch/sketch_element.dart';
+import 'package:hs_coaching_core/sketch/sketch_repository.dart';
 
-class SketchRepository implements ISketchRepository {
-  SketchRepository({
-    required FirebaseFirestore firestore,
+/// Adds create/update/archive/background/tag-mutating writes on top of core's
+/// read-only [DisplaySketchRepositoryBase].
+class DisplaySketchRepository extends DisplaySketchRepositoryBase
+    implements ISketchRepository {
+  DisplaySketchRepository({
+    required super.firestore,
     required FirebaseStorage storage,
-    required String clubId,
-    required String displayId,
-  }) : _firestore = firestore,
-       _storage = storage,
-       _clubId = clubId,
-       _displayId = displayId;
+    required super.clubId,
+    required super.displayId,
+  }) : _storage = storage;
 
-  final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
-  final String _clubId;
-  final String _displayId;
-
-  CollectionReference<Sketch> _sketchesRef() {
-    return _firestore
-        .collection('clubs')
-        .doc(_clubId)
-        .collection('displays')
-        .doc(_displayId)
-        .collection('sketches')
-        .withConverter<Sketch>(
-          fromFirestore: (snapshot, _) =>
-              Sketch.fromJson(_normalizeLegacyName(snapshot.data()!))
-                  .copyWith(id: snapshot.id),
-          toFirestore: (sketch, _) => sketch.toJson(),
-        );
-  }
-
-  /// Older documents stored the title under `name` instead of `title`.
-  static Map<String, dynamic> _normalizeLegacyName(Map<String, dynamic> data) {
-    if (data['title'] != null || data['name'] == null) return data;
-    return {...data, 'title': data['name']};
-  }
-
-  DocumentReference _currentSketchSettingsRef() {
-    return _firestore
-        .collection('clubs')
-        .doc(_clubId)
-        .collection('displays')
-        .doc(_displayId)
-        .collection('settings')
-        .doc('sketch');
-  }
-
-  CollectionReference<SketchElement> _elementsRef(String sketchId) {
-    return _firestore
-        .collection('clubs')
-        .doc(_clubId)
-        .collection('displays')
-        .doc(_displayId)
-        .collection('sketches')
-        .doc(sketchId)
-        .collection('elements')
-        .withConverter<SketchElement>(
-          fromFirestore: (snapshot, _) =>
-              SketchElement.fromJson(snapshot.data()!),
-          toFirestore: (element, _) => element.toJson(),
-        );
-  }
 
   @override
   Stream<List<SketchElement>> getSketchElements(String sketchId) {
-    return _elementsRef(sketchId).snapshots().map(
-      (snapshot) => snapshot.docs.map((doc) => doc.data()).toList(),
-    );
+    return watchSketchElements(sketchId);
   }
 
   @override
@@ -81,17 +30,17 @@ class SketchRepository implements ISketchRepository {
     String sketchId,
     SketchElement element,
   ) async {
-    await _elementsRef(sketchId).doc(element.id).set(element);
+    await elementsRef(sketchId).doc(element.id).set(element);
   }
 
   @override
   Future<void> removeElement(String sketchId, String elementId) async {
-    await _elementsRef(sketchId).doc(elementId).delete();
+    await elementsRef(sketchId).doc(elementId).delete();
   }
 
   @override
   Future<void> clearSketch(String sketchId) async {
-    final snapshot = await _elementsRef(sketchId).get();
+    final snapshot = await elementsRef(sketchId).get();
     for (final doc in snapshot.docs) {
       await doc.reference.delete();
     }
@@ -99,7 +48,7 @@ class SketchRepository implements ISketchRepository {
 
   @override
   Stream<List<Sketch>> watchAllActiveSketches({String? tag}) {
-    Query<Sketch> query = _sketchesRef().where(
+    Query<Sketch> query = sketchesRef.where(
       'status',
       isEqualTo: SketchStatus.active.name,
     );
@@ -116,7 +65,7 @@ class SketchRepository implements ISketchRepository {
 
   @override
   Stream<Sketch> watchSketch(String sketchId) {
-    return _sketchesRef()
+    return sketchesRef
         .doc(sketchId)
         .snapshots()
         .map((snapshot) => snapshot.data()!);
@@ -130,7 +79,7 @@ class SketchRepository implements ISketchRepository {
     required List<String> tags,
     String? backgroundUrl,
   }) async {
-    final batch = _firestore.batch();
+    final batch = firestore.batch();
 
     final newSketch = Sketch(
       id: '',
@@ -143,13 +92,12 @@ class SketchRepository implements ISketchRepository {
       backgroundUrl: backgroundUrl,
     );
 
-    final sketchesRef = _sketchesRef();
     final newSketchDocRef = sketchesRef.doc();
 
     batch.set(newSketchDocRef, newSketch);
 
     if (tags.isNotEmpty) {
-      batch.set(_currentSketchSettingsRef(), {
+      batch.set(currentSketchSettingsRef, {
         'sketchTags': FieldValue.arrayUnion(tags),
       }, SetOptions(merge: true));
     }
@@ -166,8 +114,8 @@ class SketchRepository implements ISketchRepository {
     required List<String> tags,
     String? backgroundUrl,
   }) async {
-    final sketchDocRef = _sketchesRef().doc(id);
-    final batch = _firestore.batch();
+    final sketchDocRef = sketchesRef.doc(id);
+    final batch = firestore.batch();
 
     final updateData = {
       'title': title,
@@ -179,7 +127,7 @@ class SketchRepository implements ISketchRepository {
     batch.update(sketchDocRef, updateData);
 
     if (tags.isNotEmpty) {
-      batch.set(_currentSketchSettingsRef(), {
+      batch.set(currentSketchSettingsRef, {
         'sketchTags': FieldValue.arrayUnion(tags),
       }, SetOptions(merge: true));
     }
@@ -188,11 +136,11 @@ class SketchRepository implements ISketchRepository {
 
   @override
   Future<void> archiveSketch(String sketchId) async {
-    await _sketchesRef().doc(sketchId).update({
+    await sketchesRef.doc(sketchId).update({
       'status': SketchStatus.archived.name,
     });
 
-    final currentSketchDoc = await _currentSketchSettingsRef().get();
+    final currentSketchDoc = await currentSketchSettingsRef.get();
     if (currentSketchDoc.exists &&
         (currentSketchDoc.data() as Map<String, dynamic>?)?['currentId'] ==
             sketchId) {
@@ -202,35 +150,35 @@ class SketchRepository implements ISketchRepository {
 
   @override
   Future<void> unarchiveSketch(String sketchId) async {
-    await _sketchesRef().doc(sketchId).update({
+    await sketchesRef.doc(sketchId).update({
       'status': SketchStatus.active.name,
     });
   }
 
   @override
   Future<void> hardDeleteSketch(String sketchId) async {
-    final elementsQuery = _elementsRef(sketchId);
+    final elementsQuery = elementsRef(sketchId);
     final elementsSnapshot = await elementsQuery.get();
 
-    final batch = _firestore.batch();
+    final batch = firestore.batch();
     for (final doc in elementsSnapshot.docs) {
       batch.delete(doc.reference);
     }
     await batch.commit();
 
-    await _sketchesRef().doc(sketchId).delete();
+    await sketchesRef.doc(sketchId).delete();
   }
 
   @override
   Future<void> updateSketchTimestamp(String sketchId) {
-    return _sketchesRef().doc(sketchId).update({
+    return sketchesRef.doc(sketchId).update({
       'lastModified': FieldValue.serverTimestamp(),
     });
   }
 
   @override
   Stream<String?> watchCurrentSketchId() {
-    return _currentSketchSettingsRef().snapshots().map((snapshot) {
+    return currentSketchSettingsRef.snapshots().map((snapshot) {
       final data = snapshot.data() as Map<String, dynamic>?;
       return data?['currentId'] as String?;
     });
@@ -238,7 +186,7 @@ class SketchRepository implements ISketchRepository {
 
   @override
   Future<void> setCurrentSketchId(String? sketchId) async {
-    await _currentSketchSettingsRef().set({
+    await currentSketchSettingsRef.set({
       'currentId': sketchId,
     }, SetOptions(merge: true));
   }
@@ -257,21 +205,21 @@ class SketchRepository implements ISketchRepository {
         '${DateTime.now().millisecondsSinceEpoch}_${imageFile.path.split('/').last}';
 
     final storageRef = _storage.ref().child(
-      'clubs/$_clubId/$_displayId/backgrounds/$fileName',
+      'clubs/$clubId/$displayId/backgrounds/$fileName',
     );
     final uploadTask = storageRef.putFile(imageFile);
     final snapshot = await uploadTask.whenComplete(() => null);
     final downloadUrl = await snapshot.ref.getDownloadURL();
 
     final newBackground = SketchBackground(title: title, url: downloadUrl);
-    await _currentSketchSettingsRef().set({
+    await currentSketchSettingsRef.set({
       'backgrounds': FieldValue.arrayUnion([newBackground.toJson()]),
     }, SetOptions(merge: true));
   }
 
   @override
   Future<void> updateSketchBackground(String id, String? backgroundUrl) async {
-    await _sketchesRef().doc(id).update({
+    await sketchesRef.doc(id).update({
       // Als backgroundUrl null is, schrijf dit expliciet als null weg in Firestore
       'backgroundUrl': backgroundUrl ?? FieldValue.delete(),
       'lastModified': FieldValue.serverTimestamp(),
@@ -280,7 +228,7 @@ class SketchRepository implements ISketchRepository {
 
   @override
   Stream<List<String>> watchAllSketchTags() {
-    return _currentSketchSettingsRef().snapshots().map((snapshot) {
+    return currentSketchSettingsRef.snapshots().map((snapshot) {
       final data = snapshot.data() as Map<String, dynamic>?;
       return List<String>.from(data?['sketchTags'] ?? []);
     });
@@ -288,7 +236,7 @@ class SketchRepository implements ISketchRepository {
 
   @override
   Stream<List<SketchBackground>> watchSketchBackgrounds() {
-    return _currentSketchSettingsRef().snapshots().map((snapshot) {
+    return currentSketchSettingsRef.snapshots().map((snapshot) {
       final data = snapshot.data() as Map<String, dynamic>?;
       final backgroundsData = List<Map<String, dynamic>>.from(
         data?['backgrounds'] ?? [],

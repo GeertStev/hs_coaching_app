@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
 import 'package:hs_coaching_app/features/display/features/chrono/data/chrono_provider.dart';
-import 'package:hs_coaching_app/features/display/features/chrono/domain/chrono.dart';
+import 'package:hs_coaching_core/chrono/chrono.dart';
 import 'package:hs_coaching_app/features/display/features/chrono/presentation/chrono_screen_controller.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
 
@@ -26,7 +27,7 @@ class ChronoControlScreen extends ConsumerWidget {
 
     return ContentControlScreen(
       contentType: DisplayContentType.chrono,
-      contentList: chronoAsync.when(
+      body: chronoAsync.when(
         data: (chrono) => _ChronoView(chrono: chrono),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) =>
@@ -61,43 +62,49 @@ class _ChronoView extends ConsumerWidget {
     final selectedCountdown = ref.watch(countdownProvider);
 
     final status = chrono.status;
+    final colorScheme = Theme.of(context).colorScheme;
+    final typography = Theme.of(context).appTypography;
+    final metrics = Theme.of(context).appMetrics;
+    final buttonLabelStyle = Theme.of(
+      context,
+    ).textTheme.labelLarge?.copyWith(fontSize: 16);
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.all(metrics.spacingMd),
       child: Column(
         children: [
           // Tijd Weergave
           Text(
             _formatDuration(elapsed),
-            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-              fontFamily: 'monospace',
-              fontWeight: FontWeight.bold,
-              color: elapsed.isNegative ? Colors.red : null,
+            style: typography.timerDisplay.copyWith(
+              color: elapsed.isNegative ? colorScheme.error : null,
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: metrics.spacingLg),
 
           // Bedieningsknoppen
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Reset Knop (Altijd actief)
+              // Reset Knop (Altijd actief, neutrale kleur)
               SizedBox(
                 width: 100, // Vaste breedte voor uniformiteit
                 height: 48,
                 child: ElevatedButton(
                   onPressed: () => commands.reset(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey,
-                    foregroundColor: Colors.white,
+                    backgroundColor: colorScheme.tertiaryContainer,
+                    foregroundColor: colorScheme.onTertiaryContainer,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(
+                        metrics.radiusDefault,
+                      ),
                     ),
                   ),
-                  child: const Text('Reset'),
+                  child: Text('Reset', style: buttonLabelStyle),
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: metrics.spacingMd),
 
               // Start / Pause / Resume (De grootste knop in het midden)
               SizedBox(
@@ -107,19 +114,15 @@ class _ChronoView extends ConsumerWidget {
                     ? ElevatedButton(
                         onPressed: () => commands.pause(chrono),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
+                          backgroundColor: colorScheme.secondary,
+                          foregroundColor: colorScheme.onSecondary,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(
+                              metrics.radiusDefault,
+                            ),
                           ),
                         ),
-                        child: const Text(
-                          'Pause',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: Text('Pause', style: buttonLabelStyle),
                       )
                     : ElevatedButton(
                         onPressed: () => commands.start(
@@ -129,24 +132,23 @@ class _ChronoView extends ConsumerWidget {
                               : selectedCountdown * 1000,
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(
+                              metrics.radiusDefault,
+                            ),
                           ),
                         ),
                         child: Text(
                           status == ChronoStatus.paused ? 'Resume' : 'Start',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: buttonLabelStyle,
                         ),
                       ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: metrics.spacingMd),
 
-              // Ronde (Lap) Knop (Altijd in de layout, grijs indien inactief)
+              // Ronde (Lap) Knop (Altijd in de layout, neutraal indien inactief)
               SizedBox(
                 width: 100, // Exact dezelfde breedte als de Reset knop
                 height: 48,
@@ -157,39 +159,37 @@ class _ChronoView extends ConsumerWidget {
                       ? () => commands.lap(chrono, elapsed.inMilliseconds)
                       : null, // null zet de ElevatedButton automatisch op disabled
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey.shade300,
-                    disabledForegroundColor: Colors.grey.shade500,
+                    backgroundColor: colorScheme.primaryContainer,
+                    foregroundColor: colorScheme.onPrimaryContainer,
+                    disabledBackgroundColor: colorScheme.surfaceContainerHighest,
+                    disabledForegroundColor: colorScheme.onSurfaceVariant,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(
+                        metrics.radiusDefault,
+                      ),
                     ),
                   ),
-                  child: const Text('Ronde'),
+                  child: Text('Ronde', style: buttonLabelStyle),
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 20),
+          SizedBox(height: metrics.spacingLg),
           // Countdown Card Instellingen
           Card(
-            elevation: 2,
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 0.0,
-              ),
+              padding: EdgeInsets.symmetric(horizontal: metrics.spacingMd),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.volume_up, color: Colors.blueGrey),
-                  const SizedBox(width: 16),
-                  const Text(
+                  Icon(Icons.volume_up, color: colorScheme.onSurfaceVariant),
+                  SizedBox(width: metrics.spacingMd),
+                  Text(
                     'Countdown:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: metrics.spacingMd),
                   DropdownButton<int>(
                     value: selectedCountdown,
                     items: const [
@@ -209,16 +209,13 @@ class _ChronoView extends ConsumerWidget {
             ),
           ),
 
-          const SizedBox(height: 20),
+          SizedBox(height: metrics.spacingLg),
 
           // Rondetijden Lijst
           if (chrono.laps.isNotEmpty) ...[
             const Divider(),
-            const Text(
-              'Rondetijden',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            const SizedBox(height: 10),
+            Text('Rondetijden', style: typography.headlineSm),
+            SizedBox(height: metrics.gutter),
             Expanded(
               child: ListView.builder(
                 itemCount: chrono.laps.length,
@@ -230,13 +227,18 @@ class _ChronoView extends ConsumerWidget {
                   final lapTime = lapTotal - previousLapTotal;
 
                   return ListTile(
-                    leading: CircleAvatar(child: Text('${index + 1}')),
+                    leading: CircleAvatar(
+                      backgroundColor: colorScheme.surfaceContainerHighest,
+                      foregroundColor: colorScheme.onSurface,
+                      child: Text('${index + 1}'),
+                    ),
                     title: Text(
                       'Rondetijd: ${_formatDuration(Duration(milliseconds: lapTime))}',
+                      style: typography.dataPoint,
                     ),
                     trailing: Text(
                       'Totaal: ${_formatDuration(Duration(milliseconds: lapTotal))}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: typography.dataPoint,
                     ),
                   );
                 },

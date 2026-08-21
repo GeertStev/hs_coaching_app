@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:hs_coaching_app/core/data/firestore_converters.dart';
+import 'package:hs_coaching_core/core/data/firestore_converters.dart';
 
 part 'timer_set.freezed.dart';
 part 'timer_set.g.dart';

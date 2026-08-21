@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/auth/data/auth_providers.dart';
 import 'package:hs_coaching_app/features/auth/domain/app_user.dart';
 import 'package:hs_coaching_app/features/auth/presentation/auth_error_messages.dart';
 import 'package:hs_coaching_app/features/club/presentation/my_clubs_screen.dart';
+import 'package:hs_coaching_app/core/theme/theme_mode_controller.dart';
 import 'package:hs_coaching_app/features/profile/presentation/personal_info_screen.dart';
 import 'package:hs_coaching_app/features/profile/presentation/profile_controller.dart';
 import 'package:hs_coaching_app/features/profile/presentation/widgets/user_avatar.dart';
@@ -156,19 +158,24 @@ class ProfileScreen extends ConsumerWidget {
           final info = user.personalInfo.isNotEmpty
               ? user.personalInfo.first
               : null;
+          final metrics = Theme.of(context).appMetrics;
+          final colorScheme = Theme.of(context).colorScheme;
           return Stack(
             children: [
               ListView(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(metrics.spacingMd),
                 children: [
                   _buildHeader(context, ref, user, fbUser),
-                  const SizedBox(height: 24),
+                  SizedBox(height: metrics.spacingLg),
+                  _sectionTitle(context, 'Weergave'),
+                  _buildAppearanceSection(context, ref),
+                  SizedBox(height: metrics.spacingLg),
                   _sectionTitle(context, 'Account'),
                   _buildAccountSection(context, ref, user, fbUser),
-                  const SizedBox(height: 24),
+                  SizedBox(height: metrics.spacingLg),
                   _sectionTitle(context, 'Persoonlijke gegevens'),
                   _buildPersonalInfoSection(context, user, info),
-                  const SizedBox(height: 24),
+                  SizedBox(height: metrics.spacingLg),
                   _sectionTitle(context, 'Clubs'),
                   Card(
                     child: ListTile(
@@ -185,19 +192,19 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: metrics.spacingLg),
                   _sectionTitle(context, 'Gevarenzone'),
                   Card(
                     child: ListTile(
                       leading: Icon(
                         Icons.delete_forever_outlined,
-                        color: Theme.of(context).colorScheme.error,
+                        color: colorScheme.error,
                       ),
                       title: Text(
                         'Account verwijderen',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyLarge?.copyWith(color: colorScheme.error),
                       ),
                       onTap: () => _deleteAccount(context, ref),
                     ),
@@ -218,9 +225,53 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildAppearanceSection(BuildContext context, WidgetRef ref) {
+    final metrics = Theme.of(context).appMetrics;
+    final themeMode = ref.watch(themeModeControllerProvider);
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(metrics.spacingMd),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Thema'),
+            SizedBox(height: metrics.spacingSm),
+            SegmentedButton<ThemeMode>(
+              segments: const [
+                ButtonSegment(
+                  value: ThemeMode.light,
+                  icon: Icon(Icons.light_mode_outlined),
+                  label: Text('Licht'),
+                ),
+                ButtonSegment(
+                  value: ThemeMode.dark,
+                  icon: Icon(Icons.dark_mode_outlined),
+                  label: Text('Donker'),
+                ),
+                ButtonSegment(
+                  value: ThemeMode.system,
+                  icon: Icon(Icons.brightness_auto_outlined),
+                  label: Text('Systeem'),
+                ),
+              ],
+              selected: {themeMode},
+              onSelectionChanged: (selection) => ref
+                  .read(themeModeControllerProvider.notifier)
+                  .setThemeMode(selection.first),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _sectionTitle(BuildContext context, String title) {
+    final metrics = Theme.of(context).appMetrics;
     return Padding(
-      padding: const EdgeInsets.only(left: 8, bottom: 8),
+      padding: EdgeInsets.only(
+        left: metrics.spacingSm,
+        bottom: metrics.spacingSm,
+      ),
       child: Text(title, style: Theme.of(context).textTheme.titleMedium),
     );
   }
@@ -231,17 +282,18 @@ class ProfileScreen extends ConsumerWidget {
     AppUser user,
     fb_auth.User? fbUser,
   ) {
+    final metrics = Theme.of(context).appMetrics;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(metrics.spacingMd),
         child: Row(
           children: [
             Stack(
               children: [
                 UserAvatar.fromUser(user, radius: 36),
                 Positioned(
-                  right: -4,
-                  bottom: -4,
+                  right: -metrics.spacingXs,
+                  bottom: -metrics.spacingXs,
                   child: IconButton.filledTonal(
                     iconSize: 16,
                     icon: const Icon(Icons.edit),
@@ -250,7 +302,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: metrics.spacingMd),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,13 +337,17 @@ class ProfileScreen extends ConsumerWidget {
     fb_auth.User? fbUser,
   ) {
     final verified = fbUser?.emailVerified ?? false;
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       child: Column(
         children: [
           ListTile(
             leading: Icon(
               verified ? Icons.verified_outlined : Icons.warning_amber_outlined,
-              color: verified ? Colors.green : Colors.orange,
+              // DESIGN.md heeft geen groen; "geverifieerd" leent Athletic Blue
+              // (primary = stabiliteit/kracht), "niet geverifieerd" Energy
+              // Yellow (secondary = warnings), in plaats van een merkvreemd groen/oranje.
+              color: verified ? colorScheme.primary : colorScheme.secondary,
             ),
             title: Text(
               verified ? 'E-mailadres geverifieerd' : 'E-mailadres niet geverifieerd',
@@ -416,6 +472,7 @@ class _EditNamesDialogState extends State<_EditNamesDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final metrics = Theme.of(context).appMetrics;
     return AlertDialog(
       title: const Text('Naam wijzigen'),
       content: Form(
@@ -430,7 +487,7 @@ class _EditNamesDialogState extends State<_EditNamesDialog> {
                   AuthValidators.requiredField(v, label: 'je voornaam'),
               textCapitalization: TextCapitalization.words,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: metrics.spacingMd),
             TextFormField(
               controller: _lastName,
               decoration: const InputDecoration(labelText: 'Achternaam'),
@@ -484,6 +541,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final metrics = Theme.of(context).appMetrics;
     return AlertDialog(
       title: const Text('Wachtwoord wijzigen'),
       content: Form(
@@ -499,7 +557,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
               obscureText: true,
               validator: AuthValidators.password,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: metrics.spacingMd),
             TextFormField(
               controller: _new,
               decoration: const InputDecoration(
@@ -509,7 +567,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
               obscureText: true,
               validator: AuthValidators.newPassword,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: metrics.spacingMd),
             TextFormField(
               controller: _confirm,
               decoration: const InputDecoration(
@@ -558,6 +616,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final metrics = Theme.of(context).appMetrics;
     return AlertDialog(
       title: const Text('Account verwijderen'),
       content: Column(
@@ -568,7 +627,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
             'Dit verwijdert je account en profielgegevens definitief. '
             'Deze actie kan niet ongedaan worden gemaakt.',
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: metrics.spacingMd),
           TextFormField(
             controller: _password,
             decoration: const InputDecoration(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/auth/data/auth_providers.dart';
 import 'package:hs_coaching_app/features/club/presentation/my_clubs_screen.dart';
 import 'package:hs_coaching_app/features/profile/presentation/profile_screen.dart';
@@ -15,8 +16,10 @@ class UserMenuButton extends ConsumerWidget {
     final user = ref.watch(appUserProvider).value;
     if (user == null) return const SizedBox.shrink();
 
+    final metrics = Theme.of(context).appMetrics;
+
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: EdgeInsets.only(right: metrics.spacingSm),
       child: PopupMenuButton<String>(
         tooltip: 'Gebruikersmenu',
         offset: const Offset(0, 48),

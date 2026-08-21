@@ -47,7 +47,9 @@ class SetContentTypeFAB extends ConsumerWidget {
       error: (e, s) => FloatingActionButton(
         onPressed: null,
         tooltip: 'Error',
-        child: Icon(Icons.error),
+        backgroundColor: Theme.of(context).colorScheme.errorContainer,
+        foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
+        child: const Icon(Icons.error),
       ),
     );
   }

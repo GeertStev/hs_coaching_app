@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/display/application/search_service.dart';
 
 class ReusableSearchBar extends ConsumerStatefulWidget {
@@ -58,8 +59,15 @@ class _ReusableSearchBarState extends ConsumerState<ReusableSearchBar> {
     // Watch the provider to rebuild the suffix icon when the text is cleared externally.
     ref.watch(widget.searchQueryProvider);
 
+    final metrics = Theme.of(context).appMetrics;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+      padding: EdgeInsets.fromLTRB(
+        metrics.spacingSm,
+        metrics.spacingSm,
+        metrics.spacingSm,
+        0,
+      ),
       child: TextField(
         controller: _searchQueryController,
         focusNode: _focusNode,

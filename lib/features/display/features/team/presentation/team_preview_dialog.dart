@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/features/display/features/team/data/team_repository.dart';
+import 'package:hs_coaching_core/team/team_repository.dart';
 import 'package:hs_coaching_app/features/display/features/team/presentation/display_team_controller.dart';
 
 class TeamPreviewDialog extends ConsumerWidget {
@@ -88,6 +88,7 @@ class TeamPreviewDialog extends ConsumerWidget {
         2: FlexColumnWidth(4),
       },
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+
       children: [
         TableRow(
           children: [
@@ -160,7 +161,7 @@ class TeamPreviewDialog extends ConsumerWidget {
 
     return Container(
       color: isWhiteTeam ? Colors.white : Colors.black,
-      padding: const EdgeInsets.all(10.0),
+      padding: const EdgeInsets.all(6.0),
       alignment: Alignment.center,
       child: Text(
         playerNames.isEmpty ? '-' : playerNames,

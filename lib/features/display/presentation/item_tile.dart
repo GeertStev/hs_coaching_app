@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
 
 class ItemTile extends StatelessWidget {
   const ItemTile({
@@ -12,7 +13,6 @@ class ItemTile extends StatelessWidget {
     this.secondaryIcon,
     this.secondaryIconTooltip,
     this.onSecondaryIconPressed,
-    this.onLongPress,
   });
 
   final String? title;
@@ -26,11 +26,15 @@ class ItemTile extends StatelessWidget {
   final String? secondaryIconTooltip;
   final VoidCallback? onSecondaryIconPressed;
 
-  final VoidCallback? onLongPress;
+  static const _thumbnailWidth = 120.0;
+  static const _thumbnailHeight = 100.0;
 
   @override
   Widget build(BuildContext context) {
     final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
+    final typography = Theme.of(context).appTypography;
+    final colorScheme = Theme.of(context).colorScheme;
+    final metrics = Theme.of(context).appMetrics;
 
     Widget? subtitleWidget;
     if (subtitle != null || dateModified != null) {
@@ -38,11 +42,11 @@ class ItemTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (subtitle != null) ...[
-            const SizedBox(height: 4),
+            SizedBox(height: metrics.spacingXs),
             Text(subtitle!, maxLines: 2, overflow: TextOverflow.ellipsis),
           ],
           if (dateModified != null) ...[
-            const SizedBox(height: 8),
+            SizedBox(height: metrics.spacingSm),
             Text(
               'Modified on ${DateFormat('dd MMM yyyy, HH:mm').format(dateModified!.toLocal())}',
               style: Theme.of(context).textTheme.bodySmall,
@@ -55,17 +59,20 @@ class ItemTile extends StatelessWidget {
     final tile = ListTile(
       title: Text(
         title ?? '',
-        style: const TextStyle(fontWeight: FontWeight.bold),
+        style: typography.bodyLg,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
+      // subtitle blijft ongestyled: erft ListTile's standaard bodyMedium
+      // (= AppTypography.bodyMd, via AppTheme's textTheme), gedimd naar
+      // onSurfaceVariant — geen reden om dat hier te herhalen.
       subtitle: subtitleWidget,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (onPrimaryIconPressed != null)
             IconButton(
-              icon: Icon(Icons.more_horiz_outlined),
+              icon: const Icon(Icons.more_horiz_outlined),
               tooltip: 'Edit Details',
               onPressed: onPrimaryIconPressed,
             ),
@@ -77,7 +84,6 @@ class ItemTile extends StatelessWidget {
             ),
         ],
       ),
-      onLongPress: onLongPress,
     );
 
     if (!hasImage) {
@@ -85,12 +91,12 @@ class ItemTile extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
+      padding: EdgeInsets.only(left: metrics.gutter),
       child: Row(
         children: [
           SizedBox(
-            width: 120,
-            height: 100,
+            width: _thumbnailWidth,
+            height: _thumbnailHeight,
             child: Image.network(
               imageUrl!,
               fit: BoxFit.contain,
@@ -100,10 +106,13 @@ class ItemTile extends StatelessWidget {
                     : const Center(child: CircularProgressIndicator());
               },
               errorBuilder: (context, error, stackTrace) {
-                return const Center(
+                return Center(
                   child: Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Icon(Icons.broken_image, color: Colors.grey),
+                    padding: EdgeInsets.all(metrics.spacingSm),
+                    child: Icon(
+                      Icons.broken_image,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 );
               },

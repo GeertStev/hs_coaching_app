@@ -63,10 +63,12 @@ class TimerControlScreen extends ConsumerWidget {
     }
 
     return ContentControlScreen(
-      contentList: const TimerSetList(),
-      onAdd: showAddTimerSheet,
-      addIcon: Icons.add,
-      addTooltip: 'Add Timer Set',
+      body: const TimerSetList(),
+      addAction: (
+        icon: Icons.add,
+        tooltip: 'Add Timer Set',
+        onPressed: showAddTimerSheet,
+      ),
       contentType: DisplayContentType.timer,
     );
   }

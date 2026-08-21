@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
-import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
+import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
+import 'package:hs_coaching_core/core/providers/display_device_ids_provider.dart';
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
 
 /// Provider for the content settings repository.

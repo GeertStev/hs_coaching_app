@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/club/data/club_providers.dart';
 import 'package:hs_coaching_app/features/club/domain/club_membership.dart';
 import 'package:hs_coaching_app/features/club/presentation/my_clubs_screen.dart';
@@ -36,32 +37,33 @@ class ClubDetailScreen extends ConsumerWidget {
           final staff = active
               .where((m) => m.role != ClubRole.player)
               .toList();
+          final metrics = Theme.of(context).appMetrics;
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(metrics.spacingMd),
             children: [
               if (staff.isNotEmpty) ...[
                 Text(
                   'Trainers & admins',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: metrics.spacingSm),
                 for (final member in staff)
                   _MemberTile(member: member, subtitle: member.role.label),
-                const SizedBox(height: 16),
+                SizedBox(height: metrics.spacingMd),
               ],
               for (final team in teams) ...[
                 Text(team.name, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
+                SizedBox(height: metrics.spacingSm),
                 Builder(
                   builder: (context) {
                     final teamMembers = active
                         .where((m) => m.teamIds.contains(team.id))
                         .toList();
                     if (teamMembers.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.only(bottom: 8),
-                        child: Text('Nog geen spelers ingedeeld.'),
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: metrics.spacingSm),
+                        child: const Text('Nog geen spelers ingedeeld.'),
                       );
                     }
                     return Column(
@@ -72,14 +74,14 @@ class ClubDetailScreen extends ConsumerWidget {
                     );
                   },
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: metrics.spacingMd),
               ],
               if (unassigned.isNotEmpty) ...[
                 Text(
                   'Nog niet ingedeeld',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: metrics.spacingSm),
                 for (final member in unassigned) _MemberTile(member: member),
               ],
             ],

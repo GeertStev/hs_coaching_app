@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
-import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
-import 'package:hs_coaching_app/features/display/features/text/domain/display_text.dart';
+import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
+import 'package:hs_coaching_core/core/providers/display_device_ids_provider.dart';
+import 'package:hs_coaching_core/text/display_text.dart';
+import 'package:hs_coaching_core/text/display_text_repository.dart';
 
 final displayTextRepositoryProvider = Provider<DisplayTextRepository>((ref) {
   final firestore = ref.watch(firebaseFirestoreProvider);
@@ -15,51 +16,19 @@ final displayTextRepositoryProvider = Provider<DisplayTextRepository>((ref) {
   );
 });
 
-/// Repository for managing display texts in Firestore.
+/// Adds add/duplicate/archive/tag-mutating writes on top of core's read-only
+/// [DisplayTextRepositoryBase].
 ///
 /// Path: `/clubs/{clubId}/displays/{displayId}/texts`
 /// This collection contains all historical text documents. A separate document at
 /// `/clubs/{clubId}/displays/{displayId}/settings/text` holds the ID of the
 /// currently active text in a field named `currentId`.
-class DisplayTextRepository {
+class DisplayTextRepository extends DisplayTextRepositoryBase {
   DisplayTextRepository({
-    required FirebaseFirestore firestore,
-    required String clubId,
-    required String displayId,
-  }) : _firestore = firestore,
-       _clubId = clubId,
-       _displayId = displayId;
-
-  final FirebaseFirestore _firestore;
-  final String _clubId;
-  final String _displayId;
-
-  /// Reference to the 'texts' collection for a specific display.
-  CollectionReference<DisplayText> _textsRef() {
-    return _firestore
-        .collection('clubs')
-        .doc(_clubId)
-        .collection('displays')
-        .doc(_displayId)
-        .collection('texts')
-        .withConverter<DisplayText>(
-          fromFirestore: (snapshot, _) =>
-              DisplayText.fromJson(snapshot.data()!).copyWith(id: snapshot.id),
-          toFirestore: (text, _) => text.toJson(),
-        );
-  }
-
-  /// Reference to the document that stores the active text ID.
-  /// Path: `.../settings/text`
-  DocumentReference _currentTextRef() {
-    return _firestore
-        .collection('clubs')
-        .doc(_clubId)
-        .collection('displays')
-        .doc(_displayId)
-        .collection('settings')
-        .doc('text');
-  }
+    required super.firestore,
+    required super.clubId,
+    required super.displayId,
+  });
 
   /// Creates a new text document.
   ///
@@ -84,17 +53,16 @@ class DisplayTextRepository {
       tags: tags,
     );
 
-    final textsRef = _textsRef();
     final newTextDocRef = textsRef.doc(); // Create a reference with a new ID
 
-    final batch = _firestore.batch();
+    final batch = firestore.batch();
 
     // 1. Add the new text document
     batch.set(newTextDocRef, newText);
 
     // 2. Optionally, update the 'current' document to point to the new text
     if (setAsCurrent) {
-      batch.set(_currentTextRef(), {
+      batch.set(currentTextRef, {
         'currentId': newTextDocRef.id,
       }, SetOptions(merge: true));
     }
@@ -102,7 +70,7 @@ class DisplayTextRepository {
     // 3. Atomically add any new tags to the global list of text tags
     // Should write to the textTags field in the collection /clubs/{clubId}/displays/{displayId}/settings/text
     if (tags.isNotEmpty) {
-      batch.set(_currentTextRef(), {
+      batch.set(currentTextRef, {
         'textTags': FieldValue.arrayUnion(tags),
       }, SetOptions(merge: true));
     }
@@ -132,11 +100,10 @@ class DisplayTextRepository {
       tags: newTags,
     );
 
-    final textsRef = _textsRef();
     final newTextDocRef = textsRef.doc(); // Create a reference for the new text
     final originalTextDocRef = textsRef.doc(originalTextId);
 
-    final batch = _firestore.batch();
+    final batch = firestore.batch();
 
     // 1. Archive the original text document
     batch.update(originalTextDocRef, {
@@ -148,14 +115,14 @@ class DisplayTextRepository {
 
     // 3. If the original was current, set the new one as current
     if (isCurrent) {
-      batch.set(_currentTextRef(), {
+      batch.set(currentTextRef, {
         'currentId': newTextDocRef.id,
       }, SetOptions(merge: true));
     }
 
     // 4. Atomically add any new tags to the global list
     if (newTags.isNotEmpty) {
-      batch.set(_currentTextRef(), {
+      batch.set(currentTextRef, {
         'textTags': FieldValue.arrayUnion(newTags),
       }, SetOptions(merge: true));
     }
@@ -172,71 +139,20 @@ class DisplayTextRepository {
 
   /// Sets the ID in the 'current' document.
   Future<void> setCurrentTextId(String? textId) async {
-    await _currentTextRef().set({'currentId': textId}, SetOptions(merge: true));
+    await currentTextRef.set({'currentId': textId}, SetOptions(merge: true));
   }
 
   /// Archives a text document, effectively "deleting" it from the active list.
   Future<void> archiveText(String textId) async {
-    await _textsRef().doc(textId).update({
+    await textsRef.doc(textId).update({
       'status': DisplayTextStatus.archived.name,
     });
   }
 
   /// Unarchives a text document, making it active again.
   Future<void> unarchiveText(String textId) async {
-    await _textsRef().doc(textId).update({
+    await textsRef.doc(textId).update({
       'status': DisplayTextStatus.active.name,
-    });
-  }
-
-  /// Returns a stream of the current text ID document.
-  Stream<DocumentSnapshot> watchCurrentTextIdDoc() {
-    return _currentTextRef().snapshots();
-  }
-
-  /// Fetches a specific text document by its ID.
-  Stream<DisplayText?> _getTextStreamById(String textId) {
-    return _textsRef()
-        .doc(textId)
-        .snapshots()
-        .map((snapshot) => snapshot.data());
-  }
-
-  /// Watches the currently active display text.
-  ///
-  /// Emits null if no text is currently set.
-  Stream<DisplayText?> watchCurrentText() {
-    return watchCurrentTextIdDoc().asyncMap((snapshot) {
-      final data = snapshot.data() as Map<String, dynamic>?;
-      final currentId = data?['currentId'] as String?;
-      if (currentId == null) return null;
-      return _getTextStreamById(currentId).first;
-    });
-  }
-
-  /// Returns a stream of all active text documents, ordered by timestamp.
-  /// Optionally filters by a specific tag.
-  Stream<List<DisplayText>> watchAllActiveTexts({String? tag}) {
-    Query<DisplayText> query = _textsRef().where(
-      'status',
-      isEqualTo: DisplayTextStatus.active.name,
-    );
-
-    if (tag != null) {
-      query = query.where('tags', arrayContains: tag);
-    }
-
-    return query
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
-  }
-
-  /// Returns a stream of the list of all used text tags.
-  Stream<List<String>> watchAllTextTags() {
-    return _currentTextRef().snapshots().map((snapshot) {
-      final data = snapshot.data() as Map<String, dynamic>?;
-      return List<String>.from(data?['textTags'] ?? []);
     });
   }
 }

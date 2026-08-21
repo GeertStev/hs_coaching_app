@@ -9,7 +9,7 @@ import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_ui_
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_service_providers.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/data/drawing_session_provider.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/command.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
+import 'package:hs_coaching_core/sketch/sketch_element.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_painter.dart';
 
 class SketchCanvas extends ConsumerStatefulWidget {

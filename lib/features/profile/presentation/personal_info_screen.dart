@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/auth/domain/app_user.dart';
 import 'package:hs_coaching_app/features/auth/presentation/auth_error_messages.dart';
 import 'package:hs_coaching_app/features/profile/presentation/profile_controller.dart';
@@ -119,6 +120,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
   @override
   Widget build(BuildContext context) {
     final isBusy = ref.watch(profileControllerProvider).isLoading;
+    final metrics = Theme.of(context).appMetrics;
 
     return Scaffold(
       appBar: AppBar(
@@ -133,25 +135,25 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(metrics.spacingMd),
           children: [
             Text('Contact', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+            SizedBox(height: metrics.spacingSm),
             TextFormField(
               controller: _email,
               decoration: const InputDecoration(labelText: 'E-mailadres'),
               keyboardType: TextInputType.emailAddress,
               validator: AuthValidators.email,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: metrics.spacingMd),
             TextFormField(
               controller: _phone,
               decoration: const InputDecoration(labelText: 'Telefoonnummer'),
               keyboardType: TextInputType.phone,
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: metrics.spacingLg),
             Text('Adres', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+            SizedBox(height: metrics.spacingSm),
             Row(
               children: [
                 Expanded(
@@ -161,7 +163,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
                     decoration: const InputDecoration(labelText: 'Straat'),
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: metrics.spacingMd),
                 Expanded(
                   child: TextFormField(
                     controller: _number,
@@ -170,7 +172,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: metrics.spacingMd),
             Row(
               children: [
                 Expanded(
@@ -179,7 +181,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
                     decoration: const InputDecoration(labelText: 'Postcode'),
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: metrics.spacingMd),
                 Expanded(
                   flex: 2,
                   child: TextFormField(
@@ -189,14 +191,14 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: metrics.spacingMd),
             TextFormField(
               controller: _country,
               decoration: const InputDecoration(labelText: 'Land'),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: metrics.spacingLg),
             Text('Persoonlijk', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+            SizedBox(height: metrics.spacingSm),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.cake_outlined),
@@ -219,7 +221,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
               ],
               onChanged: (value) => setState(() => _gender = value),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: metrics.spacingLg),
             Row(
               children: [
                 Expanded(
@@ -236,9 +238,9 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
               ],
             ),
             if (_emergencyContacts.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text('Nog geen noodcontacten toegevoegd.'),
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: metrics.spacingSm),
+                child: const Text('Nog geen noodcontacten toegevoegd.'),
               ),
             for (final contact in _emergencyContacts)
               Card(
@@ -265,7 +267,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
                   ),
                 ),
               ),
-            const SizedBox(height: 32),
+            SizedBox(height: metrics.spacingXl),
           ],
         ),
       ),
@@ -301,6 +303,8 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final metrics = Theme.of(context).appMetrics;
+
     return AlertDialog(
       title: Text(
         widget.contact == null
@@ -319,7 +323,7 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
                   AuthValidators.requiredField(v, label: 'een voornaam'),
               textCapitalization: TextCapitalization.words,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: metrics.spacingMd),
             TextFormField(
               controller: _lastName,
               decoration: const InputDecoration(labelText: 'Achternaam'),
@@ -327,7 +331,7 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
                   AuthValidators.requiredField(v, label: 'een achternaam'),
               textCapitalization: TextCapitalization.words,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: metrics.spacingMd),
             TextFormField(
               controller: _phone,
               decoration: const InputDecoration(labelText: 'Telefoonnummer'),

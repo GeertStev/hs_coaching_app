@@ -33,8 +33,8 @@ class _SketchScreenState extends ConsumerState<SketchScreen> {
                 child: settings.when(
                   data: (data) {
                     final targetSize = Size(
-                      data.width.toDouble(),
-                      data.height.toDouble(),
+                      data.contentWidth.toDouble(),
+                      data.contentHeight.toDouble(),
                     );
                     return AspectRatio(
                       aspectRatio: targetSize.aspectRatio,

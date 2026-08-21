@@ -2,33 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/core/providers/riverpod_config.dart';
+import 'package:hs_coaching_app/core/providers/shared_preferences_provider.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
+import 'package:hs_coaching_app/core/theme/theme_mode_controller.dart';
 import 'package:hs_coaching_app/features/auth/presentation/auth_gate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  final prefs = await SharedPreferences.getInstance();
   runApp(
-    const ProviderScope(
+    ProviderScope(
       retry: appProviderRetry,
-      observers: [AppProviderObserver()],
-      child: MainApp(),
+      observers: const [AppProviderObserver()],
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const MainApp(),
     ),
   );
 }
 
-class MainApp extends StatelessWidget {
+class MainApp extends ConsumerWidget {
   const MainApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeControllerProvider);
     return MaterialApp(
       title: 'HS Coaching Sketch',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        // Geen M3 "scrolled under"-tint: AppBar behoudt zijn kleur bij scrollen.
-        appBarTheme: const AppBarTheme(scrolledUnderElevation: 0),
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: themeMode,
       home: const AuthGate(),
     );
   }

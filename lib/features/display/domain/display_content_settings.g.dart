@@ -35,4 +35,5 @@ const _$DisplayContentTypeEnumMap = {
   DisplayContentType.timer: 'timer',
   DisplayContentType.chrono: 'chrono',
   DisplayContentType.tabata: 'tabata',
+  DisplayContentType.training: 'training',
 };

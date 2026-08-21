@@ -1,11 +1,11 @@
 // Repository for Firestore
 // collection: /clubs/holySquid/displays/bilzen/teams/current
-// fields: update (bool)
+// fields: timestamp (server time of the last cast)
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hs_coaching_app/core/providers/firebase_providers.dart';
-import 'package:hs_coaching_app/features/display/data/display_device_ids_provider.dart';
+import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
+import 'package:hs_coaching_core/core/providers/display_device_ids_provider.dart';
 
 final displayTeamRepositoryProvider = Provider<DisplayTeamRepository>((ref) {
   final firestore = ref.watch(firebaseFirestoreProvider);
@@ -44,7 +44,6 @@ class DisplayTeamRepository {
 
   Future<void> triggerTeamUpdate() async {
     await _teamSettingsRef.set({
-      'update': true,
       'timestamp': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

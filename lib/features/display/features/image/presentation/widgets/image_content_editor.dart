@@ -30,9 +30,9 @@ class _ImageContentEditorState extends ConsumerState<ImageContentEditor> {
     final settings = ref.read(globalSettingsProvider).value;
 
     // ToDo Content size settings
-    final fullWidth = settings?.width.toDouble() ?? 624;
+    final fullWidth = settings?.contentWidth.toDouble() ?? 624;
     final width = fullWidth - 12 - 12;
-    final fullHeight = settings?.height.toDouble() ?? 416;
+    final fullHeight = settings?.contentHeight.toDouble() ?? 416;
     final height = fullHeight - 12 - 42;
 
     final pickedFile = await ImagePicker().pickImage(

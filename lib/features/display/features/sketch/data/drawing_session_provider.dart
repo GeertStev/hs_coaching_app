@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/command.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
+import 'package:hs_coaching_core/sketch/sketch_element.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/polygon_tool.dart';
 import 'package:uuid/uuid.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_data_providers.dart';

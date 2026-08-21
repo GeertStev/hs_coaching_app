@@ -23,7 +23,13 @@ the core requirement; UI must feel instant (optimistic updates, see below).
 - `firebase_core 4`, `firebase_auth 6`, `cloud_firestore 6`, `firebase_storage 13`, `firebase_messaging 16`
 - `freezed ^3.2` + `freezed_annotation ^3.1`, `json_serializable`, `json_annotation`
 - `perfect_freehand` (sketch drawing), `flutter_svg 2`, `image_picker`, `image_cropper`, `file_picker`, `uuid`, `intl`
+- `shared_preferences` — only consumer so far is the persisted light/dark/system theme preference
+  (`core/theme/theme_mode_controller.dart`), see "Theming" below
 - `custom_lint` + `riverpod_lint` enabled
+- Fonts (`Anybody`, `Hanken Grotesk`, `JetBrains Mono`) are bundled as local assets under
+  `assets/google_fonts/` and declared in `pubspec.yaml`'s `fonts:` block — **not** the
+  `google_fonts` package, which fetches over the network at runtime by default. See "Theming"
+  below.
 
 **Codegen:** run `dart run build_runner build --delete-conflicting-outputs` after touching any
 `@freezed` / `fromJson` model. Generated `*.freezed.dart` / `*.g.dart` are committed.
@@ -40,9 +46,11 @@ code lives in `lib/core/`. `lib/common/` exists but is **empty**.
 lib/
   main.dart                 # entrypoint; ProviderScope + MaterialApp + AuthGate. Holds a big TODO/prompt block.
   core/
-    providers/firebase_providers.dart      # firebaseFirestoreProvider, firebaseStorageProvider
-    data/firestore_converters.dart         # TimestampConverter, ServerTimestampConverter (JsonConverters)
+    providers/riverpod_config.dart         # appProviderRetry, AppProviderObserver
+    providers/shared_preferences_provider.dart # sharedPreferencesProvider, overridden in main()
     presentation/lazy_indexed_stack.dart
+    theme/                                 # AppColors{Dark,Light}/AppTypography/AppMetrics/AppTheme/
+                                            # ThemeModeController — see "Theming" below
   features/
     auth/          # AuthRepository, authStateChangesProvider, appUserProvider, AuthGate, login/signup
     home/          # HomeScreen: BottomNav (Home | Screen control)
@@ -55,6 +63,123 @@ lib/
         tabata/    # tree-structured model (grouped exercises) + custom drag-and-drop editor
         image/  text/  chrono/  timer/  game/  team/  tag_and_search/
 ```
+
+### Theming (`lib/core/theme/`)
+Design system source of truth: `DESIGN_dark.md` (the original file, renamed) and `DESIGN_light.md`
+(added later) — both "Kinetic Performance System" / "Kinetic Performance: Aquatic Edition", same
+type scale and spacing/radius grid, different color tokens. `AppTheme.dark()`/`AppTheme.light()`
+each assemble everything below into a `ThemeData`; `MainApp` in `main.dart` passes both to
+`MaterialApp` (`theme`/`darkTheme`) and picks between them via `themeMode`, driven by
+`theme_mode_controller.dart`'s persisted user preference (see "Theme selection" below) — **not**
+`ThemeMode.system` alone, since the user asked for an explicit in-app toggle.
+
+- **`app_colors.dart`** — every color token from both design files as a `const Color`, in two
+  classes (`AppColorsDark`, `AppColorsLight`), each assembled into its own `const colorScheme`.
+  `background`/`on-background`/`surface-variant` are deliberately **not** ported from either file:
+  they're byte-identical to `surface`/`on-surface`/`surface-container-highest`, and the matching
+  `ColorScheme` fields have been deprecated since Flutter 3.18.
+- **`app_typography.dart`** — `AppTypography`, a `ThemeExtension` holding the 9 named text styles
+  shared by both design files' `typography` block (`timerDisplay`, `headlineLg/Md/Sm`,
+  `headlineLgMobile`, `bodyLg/Md`, `labelCaps`, `dataPoint`). A `ThemeExtension` rather than
+  stuffing these into `TextTheme`, because the names don't correspond to Material's slots — there's
+  no `TextTheme.timerDisplay`. The scale itself (font/size/weight/lineHeight/letterSpacing) doesn't
+  differ between the two design files — only the text *color* does — so `AppTypography.kinetic()`
+  takes `onSurface` as its one parameter instead of being duplicated per theme.
+- **`app_metrics.dart`** — `AppMetrics`, a `ThemeExtension` for the shared `spacing`
+  (`xs`/`sm`/`md`/`lg`/`xl`/`unit`/`containerMargin`/`gutter`/`cardPadding`) and `rounded`
+  (`radiusSm`/`radiusDefault`/`radiusMd`/`radiusLg`/`radiusXl`/`radiusFull`) scales — identical
+  between light and dark, so still a single `AppMetrics.kinetic()`. Same `ThemeExtension` treatment
+  as typography, so both use the same `Theme.of(context)` access pattern instead of scattered
+  top-level constants.
+- **`app_theme.dart`** — `AppTheme.dark()`/`AppTheme.light()` each build a `ThemeData`:
+  - `colorScheme: AppColorsDark.colorScheme` / `AppColorsLight.colorScheme`.
+  - `textTheme` starts from `Typography.material2021(colorScheme: colorScheme).white` (dark) or
+    `.black` (light) `.apply(fontFamily: 'Hanken Grotesk')` (so every default Material slot picks
+    up the right typeface even where the design file has no opinion), then `.copyWith(...)`
+    overrides the 5 tokens that *do* have a natural Material home: `headlineLarge/Medium/Small` ←
+    `headlineLg/Md/Sm`, `bodyLarge/Medium` ← `bodyLg/Md`.
+  - `cardTheme` / `inputDecorationTheme` / `chipTheme` — see "Global component theming" below; the
+    two themes genuinely diverge here, not just by color-token substitution.
+  - `extensions: [AppTypography.kinetic(onSurface: ...), AppMetrics.kinetic()]`.
+
+**Theme selection:** `theme_mode_controller.dart`'s `ThemeModeController` (`Notifier<ThemeMode>`)
+persists the user's light/dark/system choice via `shared_preferences_provider.dart`'s
+`sharedPreferencesProvider`, overridden in `main()` with the instance from
+`SharedPreferences.getInstance()` resolved *before* `runApp` (same pattern as
+`Firebase.initializeApp`) so `build()` can stay synchronous like every other Riverpod 3 Notifier
+here, no `AsyncNotifier` needed. `MainApp` watches `themeModeControllerProvider` and feeds it
+straight to `MaterialApp.themeMode`. The toggle itself is a `SegmentedButton<ThemeMode>` in
+`ProfileScreen`'s "Weergave" section (`profile_screen.dart`'s `_buildAppearanceSection`).
+
+**Access pattern — which token, from where:**
+- The 5 tokens with a Material slot (`headlineLg/Md/Sm`, `bodyLg/Md`): just use
+  `Theme.of(context).textTheme.headlineLarge` etc. — the cascade already resolves to the current
+  theme's value, no need to reach for the extension.
+- The 4 orphan tokens with no Material slot (`timerDisplay`, `dataPoint`, `labelCaps`,
+  `headlineLgMobile`): `Theme.of(context).appTypography.timerDisplay`.
+- Spacing/radius: always `Theme.of(context).appMetrics.spacingMd` / `.radiusDefault` etc. — never
+  a bare number, even one that happens to match a token's value. This is what caught real 4px-grid
+  violations already in the codebase before theming touched them (a stray `10.0` padding, a
+  `runSpacing: -2.0` hack) — neither was on the grid either design file mandates.
+- **Gotcha:** the extension getters are named `appTypography`/`appMetrics`, not
+  `typography`/`metrics`. `ThemeData` already has its own `typography` field (Flutter's
+  font-scaling class, unrelated to ours); an extension getter with that same name compiles fine
+  but is silently shadowed by the built-in field, so the mistake only surfaces at the *call site*
+  (`'bodyLg' isn't defined for type 'Typography'`), not where the extension is declared. Don't
+  rename these back to the shorter form.
+
+**Global component theming:** shape/elevation/border for a *widget kind* belongs in
+`AppTheme.dark()`/`.light()`, never hardcoded per-instance — a widget should only override the
+theme for a genuinely per-instance state (e.g. `ContentItemCard`'s `isCurrent` border color, which
+uses `colorScheme.primary` in both themes — the "currently showing" highlight is Athletic Blue per
+both design files' "Elevation & Depth" sections, not a token that should vary by theme).
+- `cardTheme`: dark's "Elevation & Depth" calls for `radiusDefault` corners, a 1px 10%-white inner
+  border, a soft shadow, `Clip.antiAlias`. Light's calls for something visually different, not just
+  a color swap of the same tokens: "active containers (like cards) use **white** surfaces to pop
+  against the off-white background" — i.e. light's *lightest* container reads as "raised" (the
+  opposite tonal direction from dark, where the *darkest* container did) — so light's `cardTheme`
+  sets an explicit `color: colorScheme.surfaceContainerLowest` and a subtle `outlineVariant` border
+  instead of dark's translucent-white inner border. `colorScheme.surfaceTint` is deliberately left
+  alone in both (not zeroed) — both design files give an explicit `surface-tint` token, so M3's
+  tint-on-elevation behavior is intentional, not an artifact to suppress.
+- `inputDecorationTheme`: dark's "Input Fields" wants a fill "darker than the card background" and
+  a 2px **Energy Yellow** (`secondary`) focus underline. Light's wants the same "recessed" fill
+  concept but a 2px **Athletic Blue** (`primary`) focus underline instead — a genuine per-theme
+  difference in the design, not an oversight. The recessed-fill token also can't be copy-pasted by
+  name: dark's fill is `colorScheme.surfaceContainerLowest`, which in the *dark* palette is darker
+  than `surface` (M3's tonal roles run the other way in dark mode) — but in the *light* palette
+  `surfaceContainerLowest` is `#FFFFFF`, i.e. the brightest tone, the one `cardTheme` above uses for
+  the "raised card" look. Using it again for light's input fill would make inputs indistinguishable
+  from cards. Light's `inputDecorationTheme` instead fills with `colorScheme.surfaceContainerHighest`
+  (the darkest grey in the light container scale) to actually read as recessed. **When porting any
+  future per-theme tonal choice, check whether the token's *semantic role* (not just its name)
+  still points the same direction in both palettes before reusing it as-is** — this bit both the
+  input fill and (per `content_item_card.dart`'s fix above) a hardcoded `colorScheme.secondary`
+  border that used to read as Energy Yellow in dark but would've been a dull brown in light,
+  since `secondary` (not `secondaryContainer`) is the vivid-yellow-bearing token only in dark's
+  palette. Don't set a local `border:`/`fillColor:` on a `TextFormField`/`TextField` unless it
+  genuinely needs to differ from every other field in the app — it silently overrides this theme.
+- `chipTheme`: `StadiumBorder()` (fully pill-shaped) in both themes, covers `Chip`/`FilterChip`/
+  `InputChip` alike — no difference described in either design file's "Shapes" section.
+
+**Fonts:** only the specific static weights the type scale actually calls for are bundled — Anybody
+600/700/800, Hanken Grotesk 400/500, JetBrains Mono 600/700. **Don't request a weight outside that
+set** (e.g. Hanken Grotesk 700) — Flutter will silently synthesize a faux-bold from the nearest
+available weight instead of erroring, which degrades typeface fidelity without any warning.
+
+**No green in the palette:** both design files' colors are deliberately narrow — Athletic Blue
+(`primary`) for active/"Work"/positive states, Energy Yellow (`secondary`/`secondaryContainer`) for
+rest/countdown/warning states, plus neutrals and `error`. There is no green. Established convention
+when a status needs a "success" color (verified, approved, usable): reuse `colorScheme.primary`,
+not a raw `Colors.green` — keeps every color in the app traceable to the token sheet instead of
+introducing an unspec'd hue. Same idea for "neutral/disabled" (`colorScheme.onSurfaceVariant`, not
+`Colors.grey`) and "destructive" (`colorScheme.error`, not `Colors.red`).
+
+Rolled out so far: all of `display/presentation/` (the shared list/card/tile/FAB/dialog widgets),
+the `tag_and_search/` feature, and `auth/`/`club/`/`profile/`. Apply the same tokens and patterns
+to any new screen — reach for `AppColorsDark`/`AppColorsLight`/`Theme.of(context).appTypography`/
+`.appMetrics` rather than `Colors.*`, a bare `TextStyle(...)`, or a magic-number
+`SizedBox`/`EdgeInsets`.
 
 ### Firestore data model
 Everything is namespaced per display device:
@@ -266,6 +391,10 @@ No localization layer (`intl` is only used for formatting).
 
 ## Working agreements
 - After editing any Freezed/JSON model, **regenerate** with build_runner before assuming it compiles.
+- Use `lib/core/theme/` (`AppColors`/`AppTypography`/`AppMetrics`/`AppTheme`) for all styling on
+  any new or touched widget — see "Theming" above. Never hardcode a `Colors.*`, a bare
+  `TextStyle(...)`, a magic-number `SizedBox`/`EdgeInsets`, or a per-instance `Card`/`Chip`/
+  `TextField` shape/border that the global theme should already provide.
 - Follow the **sketch feature** as the canonical example for new realtime features (repo → StreamNotifier
   with optimistic methods → Command classes with rollback → autoDispose AsyncNotifier controller).
 - Follow the **tabata feature** as the canonical example for tree-structured/groupable content and for

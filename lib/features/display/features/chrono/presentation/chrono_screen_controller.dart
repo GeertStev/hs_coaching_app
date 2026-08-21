@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_core/chrono/chrono.dart';
+import 'package:hs_coaching_core/core/providers/server_time_offset_provider.dart';
 import 'package:hs_coaching_app/features/display/features/chrono/data/chrono_provider.dart';
-import 'package:hs_coaching_app/features/display/features/chrono/domain/chrono.dart';
 
+/// Zelfde klokdrift-correctie als `hs_coaching_screen`'s ChronoScreenController
+/// (via [serverTimeOffsetProvider]), plus het tik-geluid tijdens de countdown
+/// dat de coach-app hier al had.
 class ChronoScreenController extends Notifier<Duration> {
   Timer? _timer;
   int? _lastCountdownSecond;
@@ -12,6 +16,7 @@ class ChronoScreenController extends Notifier<Duration> {
   Duration build() {
     final chronoAsync = ref.watch(chronoNotifierProvider);
     final chrono = chronoAsync.value ?? const Chrono();
+    final offsetMillis = ref.watch(serverTimeOffsetProvider).value ?? 0;
 
     ref.onDispose(() {
       _timer?.cancel();
@@ -21,23 +26,20 @@ class ChronoScreenController extends Notifier<Duration> {
 
     if (chrono.status == ChronoStatus.running) {
       _timer = Timer.periodic(const Duration(milliseconds: 30), (_) {
-        state = _calculateElapsed(chrono);
+        final currentOffset = ref.read(serverTimeOffsetProvider).value ?? 0;
+        state = _calculateElapsed(chrono, currentOffset);
       });
     }
 
-    return _calculateElapsed(chrono);
+    return _calculateElapsed(chrono, offsetMillis);
   }
 
-  Duration _calculateElapsed(Chrono chrono) {
+  Duration _calculateElapsed(Chrono chrono, double offsetMillis) {
     int currentElapsedMillis = 0;
 
     if (chrono.status == ChronoStatus.running) {
-      final now = DateTime.now().millisecondsSinceEpoch;
-
-      // FIX: Verwijder de serverWriteTimestamp override.
-      // We gebruiken uitsluitend authoritativeStartTimeMillis omdat
-      // de countdown daar al in is verwerkt.
-      int startMillis = chrono.authoritativeStartTimeMillis;
+      final now = serverNowMillis(offsetMillis);
+      final startMillis = chrono.authoritativeStartTimeMillis;
 
       currentElapsedMillis = now - startMillis;
 

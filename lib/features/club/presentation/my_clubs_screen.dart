@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/club/data/club_providers.dart';
 import 'package:hs_coaching_app/features/club/data/club_repository.dart';
 import 'package:hs_coaching_app/features/club/domain/club.dart';
@@ -165,6 +166,7 @@ class MyClubsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final membershipsAsync = ref.watch(myMembershipsProvider);
+    final metrics = Theme.of(context).appMetrics;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Mijn clubs')),
@@ -178,10 +180,10 @@ class MyClubsScreen extends ConsumerWidget {
         error: (err, _) => Center(child: Text(clubErrorMessage(err))),
         data: (memberships) {
           if (memberships.isEmpty) {
-            return const Center(
+            return Center(
               child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
+                padding: EdgeInsets.all(metrics.spacingLg),
+                child: const Text(
                   'Je bent nog geen lid van een club.\n'
                   'Word lid met een uitnodigingscode of vraag toestemming aan een club.',
                   textAlign: TextAlign.center,
@@ -189,8 +191,15 @@ class MyClubsScreen extends ConsumerWidget {
               ),
             );
           }
+          // 88 = FAB-hoogte + marge, geen spacing-ritme-waarde; blijft een
+          // eigen magic number voor FAB-vrije ruimte onderaan de lijst.
           return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+            padding: EdgeInsets.fromLTRB(
+              metrics.spacingMd,
+              metrics.spacingMd,
+              metrics.spacingMd,
+              88,
+            ),
             itemCount: memberships.length,
             itemBuilder: (context, index) =>
                 _MembershipTile(membership: memberships[index]),
@@ -246,23 +255,28 @@ class _MembershipTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final clubAsync = ref.watch(clubProvider(membership.clubId));
     final clubName = clubAsync.value?.name ?? membership.clubId;
+    final metrics = Theme.of(context).appMetrics;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
       child: ListTile(
         leading: const Icon(Icons.groups_outlined),
         title: Text(clubName),
         subtitle: Wrap(
-          spacing: 8,
+          spacing: metrics.spacingSm,
           children: [
             Chip(
               label: Text(membership.role.label),
               visualDensity: VisualDensity.compact,
             ),
             if (membership.isPending)
+              // Energy Yellow: DESIGN.md's kleur voor "Rest states, countdowns,
+              // and critical warnings" — past hier op een pending/wacht-status.
               Chip(
                 label: Text(membership.status.label),
+                labelStyle: TextStyle(color: colorScheme.onSecondaryContainer),
                 visualDensity: VisualDensity.compact,
-                backgroundColor: Colors.orange.shade100,
+                backgroundColor: colorScheme.secondaryContainer,
               ),
           ],
         ),

@@ -21,7 +21,7 @@ class TeamControlScreen extends ConsumerWidget {
 
     return ContentControlScreen(
       contentType: DisplayContentType.team,
-      contentList: Center(
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

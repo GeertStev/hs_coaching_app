@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/command.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
+import 'package:hs_coaching_core/sketch/sketch_element.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/stateless_tool.dart';
 
 abstract class DrawingToolBase implements StatelessTool {

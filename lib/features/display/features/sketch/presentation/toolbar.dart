@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_data_providers.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_service_providers.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_ui_providers.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/sketch_element.dart';
+import 'package:hs_coaching_core/sketch/sketch_element.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/display_sketch_controller.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/widgets/color_select_circle.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/data/drawing_session_provider.dart';
