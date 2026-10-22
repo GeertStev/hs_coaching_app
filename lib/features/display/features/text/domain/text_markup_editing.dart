@@ -104,3 +104,46 @@ TextSelection _validSelection(TextEditingValue value) {
   }
   return selection;
 }
+
+/// Sjabloon voor twee kolommen (zie core's `text_markup.dart`).
+const columnsTemplate = '{\n\n}\n{\n\n}';
+
+/// Sjabloon voor een tabel van 3 x 3 (kop + 2 rijen).
+const tableTemplate =
+    '| Header 1 | Header 2 | Header 3 |\n'
+    '|---|---|---|\n'
+    '|  |  |  |\n'
+    '|  |  |  |';
+
+/// Voegt [columnsTemplate] in op eigen regels, met de cursor in kolom 1.
+TextEditingValue insertColumns(TextEditingValue value) =>
+    _insertBlock(value, columnsTemplate, selectStart: 2, selectEnd: 2);
+
+/// Voegt [tableTemplate] in op eigen regels, met "Header 1" geselecteerd
+/// zodat je meteen kunt overtypen.
+TextEditingValue insertTable(TextEditingValue value) =>
+    _insertBlock(value, tableTemplate, selectStart: 2, selectEnd: 10);
+
+/// Vervangt de selectie door [block] en zorgt dat het op eigen regels staat.
+/// [selectStart]/[selectEnd] zijn posities binnen [block].
+TextEditingValue _insertBlock(
+  TextEditingValue value,
+  String block, {
+  required int selectStart,
+  required int selectEnd,
+}) {
+  final text = value.text;
+  final selection = _validSelection(value);
+  final before = text.substring(0, selection.start);
+  final after = text.substring(selection.end);
+  final prefix = before.isEmpty || before.endsWith('\n') ? '' : '\n';
+  final suffix = after.isEmpty || after.startsWith('\n') ? '' : '\n';
+  final offset = before.length + prefix.length;
+  return TextEditingValue(
+    text: before + prefix + block + suffix + after,
+    selection: TextSelection(
+      baseOffset: offset + selectStart,
+      extentOffset: offset + selectEnd,
+    ),
+  );
+}
