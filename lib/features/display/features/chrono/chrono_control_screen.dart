@@ -6,6 +6,7 @@ import 'package:hs_coaching_app/features/display/features/chrono/data/chrono_pro
 import 'package:hs_coaching_core/chrono/chrono.dart';
 import 'package:hs_coaching_app/features/display/features/chrono/presentation/chrono_screen_controller.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
 // Simpele lokale provider voor de dropdown state
 class CountdownNotifier extends Notifier<int> {
@@ -30,8 +31,10 @@ class ChronoControlScreen extends ConsumerWidget {
       body: chronoAsync.when(
         data: (chrono) => _ChronoView(chrono: chrono),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) =>
-            Center(child: Text('Error loading Chrono: $err')),
+        error: (err, stack) => ErrorView(
+          error: err,
+          onRetry: () => ref.invalidate(chronoNotifierProvider),
+        ),
       ),
     );
   }

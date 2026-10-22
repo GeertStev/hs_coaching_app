@@ -9,23 +9,25 @@ import 'package:hs_coaching_app/features/club/domain/club_membership.dart';
 import 'package:hs_coaching_app/features/club/presentation/club_controller.dart';
 import 'package:hs_coaching_app/features/club/presentation/club_detail_screen.dart';
 import 'package:hs_coaching_app/features/club/presentation/club_manage_screen.dart';
+import 'package:hs_coaching_core/core/errors/user_message.dart';
 
-/// Nederlandse foutmelding voor club-acties.
+/// Foutmelding voor club-acties. Eigen [ClubException]s geven hun tekst
+/// zelf door (via core's [userMessage]); hier alleen de Firebase-fouten
+/// die voor clubs een concretere uitleg verdienen.
 String clubErrorMessage(Object? error) {
-  if (error is ClubException) return error.message;
-  if (error is StateError) return 'Je bent niet ingelogd.';
+  if (error is StateError) return 'You are not signed in.';
   if (error is FirebaseException) {
     switch (error.code) {
       case 'permission-denied':
-        return 'Geen toegang. Controleer of de Firestore security rules zijn '
-            'gedeployed (firebase deploy --only firestore).';
+        return 'No access. Check that the Firestore security rules are '
+            'deployed (firebase deploy --only firestore).';
       case 'failed-precondition':
-        return 'De database mist een index voor deze opvraging. Deploy de '
-            'indexes (firebase deploy --only firestore) — de aanmaaklink '
-            'staat ook in de debug-console.';
+        return 'The database is missing an index for this query. Deploy the '
+            'indexes (firebase deploy --only firestore); the link to create '
+            'it is also in the debug console.';
     }
   }
-  return 'Er is een fout opgetreden. Probeer het opnieuw.';
+  return userMessage(error);
 }
 
 void _showResult(

@@ -42,7 +42,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     } else {
       final error = ref.read(authControllerProvider).error;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authErrorMessage(error ?? ''))),
+        SnackBar(content: Text(authErrorMessage(error))),
       );
     }
   }
@@ -82,7 +82,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       prefixIcon: Icon(Icons.person_outline),
                     ),
                     validator: (v) =>
-                        AuthValidators.requiredField(v, label: 'je voornaam'),
+                        AuthValidators.requiredField(v, label: 'your first name'),
                     textCapitalization: TextCapitalization.words,
                     autofillHints: const [AutofillHints.givenName],
                     textInputAction: TextInputAction.next,
@@ -95,7 +95,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       prefixIcon: Icon(Icons.person_outline),
                     ),
                     validator: (v) =>
-                        AuthValidators.requiredField(v, label: 'je achternaam'),
+                        AuthValidators.requiredField(v, label: 'your last name'),
                     textCapitalization: TextCapitalization.words,
                     autofillHints: const [AutofillHints.familyName],
                     textInputAction: TextInputAction.next,

@@ -7,6 +7,7 @@ import 'package:hs_coaching_core/tabata/tabata.dart';
 import 'package:hs_coaching_core/tabata/tabata_progress.dart';
 import 'package:hs_coaching_app/features/display/features/tabata/presentation/tabata_screen_controller.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
 class TabataControlScreen extends ConsumerWidget {
   const TabataControlScreen({super.key});
@@ -20,8 +21,10 @@ class TabataControlScreen extends ConsumerWidget {
       body: tabataAsync.when(
         data: (tabata) => _TabataView(tabata: tabata),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) =>
-            Center(child: Text('Error loading Tabata: $err')),
+        error: (err, stack) => ErrorView(
+          error: err,
+          onRetry: () => ref.invalidate(tabataNotifierProvider),
+        ),
       ),
     );
   }
@@ -485,7 +488,10 @@ class _ListTab extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) => Center(child: Text('Fout bij laden: $err')),
+            error: (err, stack) => ErrorView(
+              error: err,
+              onRetry: () => ref.invalidate(tabataPresetsProvider),
+            ),
           ),
         ),
       ],

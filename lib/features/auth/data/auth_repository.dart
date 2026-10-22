@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:hs_coaching_app/features/auth/domain/app_user.dart';
+import 'package:hs_coaching_core/core/errors/error_reporting.dart';
 
 /// Repository voor authenticatie en het bijbehorende `users/{uid}` document.
 class AuthRepository {
@@ -28,8 +29,9 @@ class AuthRepository {
         await _userDoc(uid).set({
           'lastLogin': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
-      } catch (_) {
-        // Bewust genegeerd: login is al geslaagd.
+      } catch (e, st) {
+        // Niet getoond: login is al geslaagd.
+        reportError(e, st, context: 'Auth: update lastLogin');
       }
     }
   }
@@ -64,8 +66,9 @@ class AuthRepository {
     // Verificatiemail versturen; niet blokkerend voor de signup-flow.
     try {
       await user.sendEmailVerification();
-    } catch (_) {
-      // Kan later opnieuw vanuit het profielscherm.
+    } catch (e, st) {
+      // Niet getoond: kan later opnieuw vanuit het profielscherm.
+      reportError(e, st, context: 'Auth: send verification email');
     }
   }
 

@@ -4,6 +4,7 @@ import 'package:hs_coaching_app/features/display/domain/display_content_settings
 import 'package:hs_coaching_app/features/display/features/game/data/game_provider.dart';
 import 'package:hs_coaching_app/features/display/features/game/presentation/game_controller.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
 class GameControlScreen extends ConsumerWidget {
   const GameControlScreen({super.key});
@@ -12,22 +13,17 @@ class GameControlScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final gameSettings = ref.watch(gameSettingsProvider);
 
-    // Luister naar de controller voor eventuele fouten tijdens Firebase mutaties
-    ref.listen<AsyncValue<void>>(gameControllerProvider, (_, state) {
-      if (state.hasError && !state.isLoading) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Fout bij het updaten van de score: ${state.error}'),
-          ),
-        );
-      }
-    });
+    // Toon een melding als een score-update naar Firebase mislukt
+    listenForMutationErrors(ref, context, gameControllerProvider);
 
     return ContentControlScreen(
       contentType: DisplayContentType.game,
       body: gameSettings.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) => ErrorView(
+          error: err,
+          onRetry: () => ref.invalidate(gameSettingsProvider),
+        ),
         data: (settings) {
           final controller = ref.read(gameControllerProvider.notifier);
 

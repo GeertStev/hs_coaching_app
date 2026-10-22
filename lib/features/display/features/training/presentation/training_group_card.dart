@@ -152,7 +152,7 @@ class TrainingGroupCard extends ConsumerWidget {
       canAccept: (payload) => canGroupWithTarget(ref, payload.path, path),
       onAccept: (payload) => _handleMergeAccept(ref, context, payload),
       rejectionMessage: (_) =>
-          'Deze $_label kan dit niet bevatten (max-diepte-3 zou overschreden worden).',
+          'This $_label cannot hold this (it would exceed the maximum depth of 3).',
       child: draggable,
     );
 

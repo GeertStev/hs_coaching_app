@@ -22,7 +22,7 @@ class ProfileScreen extends ConsumerWidget {
     final error = ref.read(profileControllerProvider).error;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(authErrorMessage(error ?? ''))));
+    ).showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
   }
 
   void _showMessage(BuildContext context, String message) {
@@ -484,7 +484,7 @@ class _EditNamesDialogState extends State<_EditNamesDialog> {
               controller: _firstName,
               decoration: const InputDecoration(labelText: 'Voornaam'),
               validator: (v) =>
-                  AuthValidators.requiredField(v, label: 'je voornaam'),
+                  AuthValidators.requiredField(v, label: 'your first name'),
               textCapitalization: TextCapitalization.words,
             ),
             SizedBox(height: metrics.spacingMd),
@@ -492,7 +492,7 @@ class _EditNamesDialogState extends State<_EditNamesDialog> {
               controller: _lastName,
               decoration: const InputDecoration(labelText: 'Achternaam'),
               validator: (v) =>
-                  AuthValidators.requiredField(v, label: 'je achternaam'),
+                  AuthValidators.requiredField(v, label: 'your last name'),
               textCapitalization: TextCapitalization.words,
             ),
           ],

@@ -78,7 +78,7 @@ Future<TrainingMutationResult> applyTrainingMove(
   } on TrainingInvalidMoveException catch (e) {
     return TrainingMutationRejected(e.reason);
   } on TrainingPathError {
-    return TrainingMutationRejected('Dit slepen is niet meer geldig.');
+    return TrainingMutationRejected('This drag is no longer valid.');
   }
 
   await ref
@@ -102,7 +102,7 @@ Future<TrainingMutationResult> applyTrainingMerge(
   } on TrainingInvalidMoveException catch (e) {
     return TrainingMutationRejected(e.reason);
   } on TrainingPathError {
-    return TrainingMutationRejected('Dit slepen is niet meer geldig.');
+    return TrainingMutationRejected('This drag is no longer valid.');
   }
 
   await ref
