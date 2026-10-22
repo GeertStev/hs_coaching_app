@@ -36,12 +36,11 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase {
     await elementsRef(sketchId).doc(elementId).delete();
   }
 
-  /// Verwijdert alle elementen van een sketch.
+  /// Verwijdert alle elementen van een sketch in één batch, zodat het scherm
+  /// niet element per element ziet verdwijnen.
   Future<void> clearSketch(String sketchId) async {
     final snapshot = await elementsRef(sketchId).get();
-    for (final doc in snapshot.docs) {
-      await doc.reference.delete();
-    }
+    await _deleteInBatches(snapshot.docs.map((doc) => doc.reference));
   }
 
   /// Streamed de lijst met alle actieve sketches, optioneel gefilterd op tag.
@@ -133,18 +132,21 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase {
     await batch.commit();
   }
 
-  /// Archiveert een sketch.
+  /// Archiveert een sketch. Staat die sketch live, dan wordt `currentId` in
+  /// dezelfde batch gewist.
   Future<void> archiveSketch(String sketchId) async {
-    await sketchesRef.doc(sketchId).update({
+    final settings = (await sketchSettingsRef.get()).data();
+
+    final batch = firestore.batch();
+    batch.update(sketchesRef.doc(sketchId), {
       'status': SketchStatus.archived.name,
     });
-
-    final currentSketchDoc = await currentSketchSettingsRef.get();
-    if (currentSketchDoc.exists &&
-        (currentSketchDoc.data() as Map<String, dynamic>?)?['currentId'] ==
-            sketchId) {
-      await clearCurrentSketch();
+    if (settings?.currentId == sketchId) {
+      batch.set(currentSketchSettingsRef, {
+        'currentId': null,
+      }, SetOptions(merge: true));
     }
+    await batch.commit();
   }
 
   /// Haalt een sketch uit het archief.
@@ -156,16 +158,26 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase {
 
   /// Verwijdert een sketch permanent inclusief alle subcollecties.
   Future<void> hardDeleteSketch(String sketchId) async {
-    final elementsQuery = elementsRef(sketchId);
-    final elementsSnapshot = await elementsQuery.get();
+    final elementsSnapshot = await elementsRef(sketchId).get();
+    await _deleteInBatches([
+      ...elementsSnapshot.docs.map((doc) => doc.reference),
+      sketchesRef.doc(sketchId),
+    ]);
+  }
 
-    final batch = firestore.batch();
-    for (final doc in elementsSnapshot.docs) {
-      batch.delete(doc.reference);
+  /// Firestore staat max. 500 operaties per batch toe. Tot die grens is het
+  /// verwijderen atomair; daarboven wordt in opeenvolgende batches gewerkt.
+  static const _maxBatchSize = 500;
+
+  Future<void> _deleteInBatches(Iterable<DocumentReference> refs) async {
+    final all = refs.toList();
+    for (var start = 0; start < all.length; start += _maxBatchSize) {
+      final batch = firestore.batch();
+      for (final ref in all.skip(start).take(_maxBatchSize)) {
+        batch.delete(ref);
+      }
+      await batch.commit();
     }
-    await batch.commit();
-
-    await sketchesRef.doc(sketchId).delete();
   }
 
   /// Werkt de `lastModified` timestamp van de sketch bij.
@@ -219,20 +231,15 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase {
 
   /// Streamed alle unieke gebruikte sketch-tags.
   Stream<List<String>> watchAllSketchTags() {
-    return currentSketchSettingsRef.snapshots().map((snapshot) {
-      final data = snapshot.data() as Map<String, dynamic>?;
-      return List<String>.from(data?['sketchTags'] ?? []);
-    });
+    return sketchSettingsRef
+        .snapshots()
+        .map((snapshot) => snapshot.data()?.sketchTags ?? const []);
   }
 
   /// Streamed alle beschikbare achtergronden.
   Stream<List<SketchBackground>> watchSketchBackgrounds() {
-    return currentSketchSettingsRef.snapshots().map((snapshot) {
-      final data = snapshot.data() as Map<String, dynamic>?;
-      final backgroundsData = List<Map<String, dynamic>>.from(
-        data?['backgrounds'] ?? [],
-      );
-      return backgroundsData.map(SketchBackground.fromJson).toList();
-    });
+    return sketchSettingsRef
+        .snapshots()
+        .map((snapshot) => snapshot.data()?.backgrounds ?? const []);
   }
 }
