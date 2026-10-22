@@ -27,7 +27,7 @@ class ContentList<T> extends ConsumerWidget {
   });
 
   /// Alle actieve items; tag- en zoekfilters worden lokaal toegepast.
-  final ProviderListenable<AsyncValue<List<T>>> itemsProvider;
+  final ProviderBase<AsyncValue<List<T>>> itemsProvider;
   final NotifierProvider<SearchNotifier, String> searchQueryProvider;
 
   /// Gebruikte tags met hun aantal items (zie `countTags`).
@@ -50,8 +50,6 @@ class ContentList<T> extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedTags = ref.watch(selectedTagsProvider);
     final itemsAsync = ref.watch(itemsProvider);
-    final metrics = Theme.of(context).appMetrics;
-    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       children: [
@@ -103,7 +101,7 @@ class ContentList<T> extends ConsumerWidget {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stack) => ErrorView(
               error: error,
-              onRetry: () => ref.invalidate(itemsProvider(selectedTag)),
+              onRetry: () => ref.invalidate(itemsProvider),
             ),
           ),
         ),
