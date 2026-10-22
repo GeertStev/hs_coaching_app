@@ -25,6 +25,24 @@ class ToolConfig {
     required this.uuid,
   });
 
+  /// Vertaalt een lokale canvas-coördinaat naar doelscherm-coördinaten, zonder begrenzing.
+  Offset toTarget(Offset localOffset) {
+    if (actualSize.isEmpty || targetSize.isEmpty) return localOffset;
+    return Offset(
+      localOffset.dx * targetSize.width / actualSize.width,
+      localOffset.dy * targetSize.height / actualSize.height,
+    );
+  }
+
+  /// Vertaalt een doelscherm-coördinaat naar de lokale canvas-coördinaat.
+  Offset toLocal(Offset targetOffset) {
+    if (actualSize.isEmpty || targetSize.isEmpty) return targetOffset;
+    return Offset(
+      targetOffset.dx * actualSize.width / targetSize.width,
+      targetOffset.dy * actualSize.height / targetSize.height,
+    );
+  }
+
   /// Vertaalt een lokale canvas-coördinaat naar de doelscherm-coördinaten.
   Offset transformAndClamp(Offset localOffset) {
     if (actualSize.isEmpty || targetSize.isEmpty) return localOffset;
@@ -48,8 +66,11 @@ class DrawingSessionState {
   final SketchElement? temporaryElement;
   final SketchElement? originalElement;
   final Offset? panStartOffset;
-  final int interactionMode; // 0: none, 1: moving, 2: rotating
+  final int
+  interactionMode; // 0: none, 1: moving, 2: rotating, 3: handle verslepen
   final IconMenuRequest? iconMenuRequest;
+  // Index in editHandles() van de handle die versleept wordt (interactionMode 3)
+  final int? handleIndex;
 
   const DrawingSessionState({
     this.temporaryElement,
@@ -57,6 +78,7 @@ class DrawingSessionState {
     this.panStartOffset,
     this.interactionMode = 0,
     this.iconMenuRequest,
+    this.handleIndex,
   });
 
   DrawingSessionState copyWith({
@@ -65,6 +87,7 @@ class DrawingSessionState {
     Offset? panStartOffset,
     int? interactionMode,
     IconMenuRequest? iconMenuRequest,
+    int? handleIndex,
   }) {
     return DrawingSessionState(
       temporaryElement: temporaryElement ?? this.temporaryElement,
@@ -72,6 +95,7 @@ class DrawingSessionState {
       panStartOffset: panStartOffset ?? this.panStartOffset,
       interactionMode: interactionMode ?? this.interactionMode,
       iconMenuRequest: iconMenuRequest ?? this.iconMenuRequest,
+      handleIndex: handleIndex ?? this.handleIndex,
     );
   }
 

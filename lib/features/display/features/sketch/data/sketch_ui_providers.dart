@@ -29,6 +29,17 @@ final activeToolProvider = NotifierProvider<ActiveToolNotifier, DrawingTool>(
   ActiveToolNotifier.new,
 );
 
+/// De kleuren en lijndiktes die de toolbar aanbiedt.
+const List<Color> sketchColors = [
+  Colors.white,
+  Colors.black,
+  Colors.amber,
+  Colors.red,
+  Colors.green,
+  Colors.blue,
+];
+const List<int> sketchStrokeWidths = [1, 2, 4];
+
 /// Beheert de actieve tekenkleur voor nieuwe vormen.
 class SelectedColorNotifier extends Notifier<Color> {
   @override
@@ -59,6 +70,7 @@ class FillShapeNotifier extends Notifier<bool> {
   bool build() => false;
 
   void toggle() => state = !state;
+  void set(bool filled) => state = filled;
 }
 
 final fillShapeProvider = NotifierProvider<FillShapeNotifier, bool>(

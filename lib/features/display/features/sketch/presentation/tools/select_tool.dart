@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/command.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/domain/element_editing.dart';
 import 'package:hs_coaching_core/sketch/sketch_element.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_painter.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/stateless_tool.dart';
@@ -8,6 +9,7 @@ import 'dart:math' as math;
 class SelectTool implements StatelessTool {
   static const double _rotationHandleHitRadius = 24.0;
   static const double _dropdownHandleHitSize = 24.0;
+  static const double _editHandleHitRadius = 24.0;
 
   @override
   ToolResult onPanStart(
@@ -37,6 +39,40 @@ class SelectTool implements StatelessTool {
               temporaryElement: selectedElement,
               originalElement: selectedElement,
               panStartOffset: localPos,
+            ),
+          );
+        }
+      }
+
+      if (selectedElement is RectangleElement) {
+        final rotationHandle = SketchPainter.getRectangleRotationHandle(
+          selectedElement,
+          config.actualSize,
+          config.targetSize,
+        );
+        if ((localPos - rotationHandle).distance <= _rotationHandleHitRadius) {
+          return ToolResult(
+            state: state.copyWith(
+              interactionMode: 2,
+              temporaryElement: selectedElement,
+              originalElement: selectedElement,
+              panStartOffset: localPos,
+            ),
+          );
+        }
+      }
+
+      // Handles (eindpunten, hoekpunten, cirkelrand) gaan vóór het verschuiven van de vorm
+      if (selectedElement != null) {
+        final handleIndex = _getHandleAt(selectedElement, localPos, config);
+        if (handleIndex != null) {
+          return ToolResult(
+            state: state.copyWith(
+              interactionMode: 3,
+              temporaryElement: selectedElement,
+              originalElement: selectedElement,
+              panStartOffset: localPos,
+              handleIndex: handleIndex,
             ),
           );
         }
@@ -77,29 +113,9 @@ class SelectTool implements StatelessTool {
 
     if (state.interactionMode == 1) {
       // Moving
-      final localDelta = localPos - state.panStartOffset!;
-      final scaleX = config.targetSize.width / config.actualSize.width;
-      final scaleY = config.targetSize.height / config.actualSize.height;
-      final delta = Offset(localDelta.dx * scaleX, localDelta.dy * scaleY);
-
-      updatedElement = updatedElement.map(
-        path: (e) => e.copyWith(
-          points: e.points
-              .map((p) => p.copyWith(offset: p.offset + delta))
-              .toList(),
-        ),
-        arrow: (e) => e.copyWith(start: e.start + delta, end: e.end + delta),
-        line: (e) => e.copyWith(start: e.start + delta, end: e.end + delta),
-        rectangle: (e) =>
-            e.copyWith(start: e.start + delta, end: e.end + delta),
-        polygon: (e) => e.copyWith(
-          points: e.points
-              .map((p) => p.copyWith(offset: p.offset + delta))
-              .toList(),
-        ),
-        circle: (e) => e.copyWith(center: e.center + delta),
-        icon: (e) => e.copyWith(position: e.position + delta),
-      );
+      final delta =
+          config.toTarget(localPos) - config.toTarget(state.panStartOffset!);
+      updatedElement = translateElement(updatedElement, delta);
       newPanStartOffset = localPos;
     } else if (state.interactionMode == 2 && updatedElement is IconElement) {
       // Rotating
@@ -121,6 +137,21 @@ class SelectTool implements StatelessTool {
 
       updatedElement = icon.copyWith(rotation: icon.rotation + angle);
       newPanStartOffset = localPos;
+    } else if (state.interactionMode == 2 &&
+        state.originalElement is RectangleElement) {
+      // Rechthoek roteren: altijd vanaf het origineel, zodat vastklikken op 45° werkt.
+      // panStartOffset blijft het beginpunt van het slepen.
+      updatedElement = rotateRectangle(
+        state.originalElement! as RectangleElement,
+        config.toTarget(state.panStartOffset!),
+        config.toTarget(localPos),
+      );
+    } else if (state.interactionMode == 3 && state.handleIndex != null) {
+      updatedElement = moveHandle(
+        updatedElement,
+        state.handleIndex!,
+        config.transformAndClamp(localPos),
+      );
     }
 
     return ToolResult(
@@ -129,6 +160,7 @@ class SelectTool implements StatelessTool {
         originalElement: state.originalElement,
         panStartOffset: newPanStartOffset,
         interactionMode: state.interactionMode,
+        handleIndex: state.handleIndex,
       ),
     );
   }
@@ -184,23 +216,41 @@ class SelectTool implements StatelessTool {
       }
     }
 
-    final foundElement = _getElementAt(localPos, config);
+    // Een tik op een handle van het geselecteerde element houdt de selectie
+    if (selectedElement != null &&
+        _getHandleAt(selectedElement, localPos, config) != null) {
+      return ToolResult(state: state.clear());
+    }
 
+    // Een tik selecteert alleen; er blijft geen tijdelijk element achter in de sessie
+    // (anders tekent de painter een verouderde kopie en blijven tekenhulpen zichtbaar).
+    final foundElement = _getElementAt(localPos, config);
     if (foundElement != null) {
-      // Zodra we de selectie opslaan voor de interactie, bepalen we
-      // pas de start-offset (deze moet later wél vergeleken worden,
-      // localPos is hier prima als referentiepunt voor onPanUpdate)
       return ToolResult(
-        state: state.copyWith(
-          interactionMode: 1, // moving
-          temporaryElement: foundElement,
-          originalElement: foundElement,
-          panStartOffset: localPos,
-        ),
+        state: state.clear(),
         selectedElementId: foundElement.id,
       );
     }
     return ToolResult(state: state.clear(), clearSelection: true);
+  }
+
+  /// Geeft de index (in editHandles) van de handle onder [localPoint], of null.
+  int? _getHandleAt(
+    SketchElement element,
+    Offset localPoint,
+    ToolConfig config,
+  ) {
+    final handles = editHandles(element);
+    int? closest;
+    var closestDistance = _editHandleHitRadius;
+    for (var i = 0; i < handles.length; i++) {
+      final distance = (config.toLocal(handles[i]) - localPoint).distance;
+      if (distance <= closestDistance) {
+        closest = i;
+        closestDistance = distance;
+      }
+    }
+    return closest;
   }
 
   SketchElement? _getElementAt(Offset localPoint, ToolConfig config) {

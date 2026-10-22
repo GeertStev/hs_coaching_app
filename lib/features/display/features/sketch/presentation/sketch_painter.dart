@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 //import 'dart:ui' as ui;
 import 'package:hs_coaching_core/sketch/sketch_element.dart';
+import 'package:hs_coaching_core/sketch/sketch_geometry.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/domain/element_editing.dart';
 
 class SketchPainter extends CustomPainter {
   const SketchPainter({
@@ -188,30 +190,27 @@ class SketchPainter extends CustomPainter {
         final localEnd = _scaleToLocal(end);
         canvas.drawLine(localStart, localEnd, paint);
 
-      case RectangleElement(
-        :final start,
-        :final end,
-        :final color,
-        :final strokeWidth,
-        :final fillColor,
-      ):
+      case RectangleElement(:final color, :final strokeWidth, :final fillColor):
         final paint = Paint()
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round;
 
-        final localStart = _scaleToLocal(start);
-        final localEnd = _scaleToLocal(end);
-        final rect = Rect.fromPoints(localStart, localEnd);
+        // Hoekpunten via core, zodat een gedraaide rechthoek klopt met het scherm
+        final path = Path()
+          ..addPolygon(
+            rectangleCorners(element).map(_scaleToLocal).toList(),
+            true,
+          );
         if (fillColor != null) {
           paint
             ..style = PaintingStyle.fill
             ..color = fillColor;
-          canvas.drawRect(rect, paint);
+          canvas.drawPath(path, paint);
         }
         paint.style = PaintingStyle.stroke;
         paint.color = color;
         paint.strokeWidth = _scaleValueToLocal(strokeWidth.toDouble());
-        canvas.drawRect(rect, paint);
+        canvas.drawPath(path, paint);
 
       case PolygonElement(
         :final points,
@@ -251,8 +250,11 @@ class SketchPainter extends CustomPainter {
 
         // EXTRA: Als deze veelhoek op dit moment getekend wordt (in currentElements),
         // teken dan kleine hulpcirkels op de hoekpunten zodat de coach ziet waar hij kan klikken.
-        final isTemporary = currentElements.any((e) => e.id == element.id);
-        if (isTemporary) {
+        // Een geselecteerde veelhoek die versleept wordt krijgt de gewone handles.
+        final isBeingDrawn =
+            element.id != selectedElementId &&
+            currentElements.any((e) => e.id == element.id);
+        if (isBeingDrawn) {
           final vertexPaint = Paint()
             ..color = Colors.blue
             ..style = PaintingStyle.fill;
@@ -327,6 +329,25 @@ class SketchPainter extends CustomPainter {
   }
 
   void _drawSelectionUI(Canvas canvas, SketchElement element) {
+    // Vormen met handles tonen geen kader, alleen hun versleepbare punten
+    final handles = editHandles(element);
+    if (handles.isNotEmpty) {
+      if (element is RectangleElement) {
+        _drawRectangleRotationHandle(canvas, element);
+      }
+      if (element is CircleElement) {
+        canvas.drawCircle(
+          _scaleToLocal(element.center),
+          3.0,
+          Paint()..color = Colors.blue,
+        );
+      }
+      for (final handle in handles) {
+        _drawHandle(canvas, _scaleToLocal(handle));
+      }
+      return;
+    }
+
     final rect = getBoundingBox(element, actualSize, targetSize);
     final paint = Paint()
       ..color = Colors.blue
@@ -358,6 +379,73 @@ class SketchPainter extends CustomPainter {
         ..close();
       canvas.drawPath(path, paint..style = PaintingStyle.fill);
     }
+  }
+
+  static const double _handleRadius = 7.0;
+
+  void _drawHandle(Canvas canvas, Offset localCenter) {
+    canvas.drawCircle(
+      localCenter,
+      _handleRadius,
+      Paint()..color = Colors.white,
+    );
+    canvas.drawCircle(
+      localCenter,
+      _handleRadius,
+      Paint()
+        ..color = Colors.blue
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0,
+    );
+  }
+
+  void _drawRectangleRotationHandle(Canvas canvas, RectangleElement element) {
+    final corners = rectangleCorners(element).map(_scaleToLocal).toList();
+    final edgeMiddle = (corners[0] + corners[1]) / 2;
+    final handle = getRectangleRotationHandle(element, actualSize, targetSize);
+    final paint = Paint()
+      ..color = Colors.blue
+      ..strokeWidth = 1.5;
+    canvas.drawLine(edgeMiddle, handle, paint);
+    canvas.drawCircle(handle, 8.0, paint);
+    // Klein pijltje-symbool: een witte boog in de handle
+    canvas.drawArc(
+      Rect.fromCircle(center: handle, radius: 4.0),
+      -math.pi / 2,
+      1.5 * math.pi,
+      false,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+  }
+
+  /// Positie (lokaal) van de rotatie-handle van een rechthoek: een vaste afstand buiten het
+  /// midden van de eerste zijde (bij een rechthoek zonder rotatie: de bovenkant).
+  static Offset getRectangleRotationHandle(
+    RectangleElement element,
+    Size actualSize,
+    Size targetSize,
+  ) {
+    const handleDistance = 30.0;
+    Offset scale(Offset o) {
+      if (actualSize.isEmpty || targetSize.isEmpty) return o;
+      return Offset(
+        o.dx * actualSize.width / targetSize.width,
+        o.dy * actualSize.height / targetSize.height,
+      );
+    }
+
+    final corners = rectangleCorners(element).map(scale).toList();
+    final edgeMiddle = (corners[0] + corners[1]) / 2;
+    final center = scale(rectangleCenter(element));
+    var direction = edgeMiddle - center;
+    if (direction.distance < 1e-6) {
+      // Platte rechthoek: wijs "omhoog" in het gedraaide assenstelsel
+      direction = Offset.fromDirection(element.rotation - math.pi / 2);
+    }
+    return edgeMiddle + direction / direction.distance * handleDistance;
   }
 
   static Offset getRotationHandle(
@@ -458,24 +546,20 @@ class SketchPainter extends CustomPainter {
         return distanceToSegment(localPoint, localStart, localEnd) <=
             tolerance / 2;
 
-      case RectangleElement(:final start, :final end, :final strokeWidth):
-        final localStart = scaleToLocal(start);
-        final localEnd = scaleToLocal(end);
-        final rect = Rect.fromPoints(localStart, localEnd);
-
+      case RectangleElement(:final strokeWidth, :final fillColor):
+        final corners = rectangleCorners(element).map(scaleToLocal).toList();
         final tolerance = math.max(
           hitTolerance,
           scaleValToLocal(strokeWidth.toDouble()),
         );
-        final tl = rect.topLeft;
-        final tr = rect.topRight;
-        final bl = rect.bottomLeft;
-        final br = rect.bottomRight;
-
-        return distanceToSegment(localPoint, tl, tr) <= tolerance / 2 ||
-            distanceToSegment(localPoint, tr, br) <= tolerance / 2 ||
-            distanceToSegment(localPoint, br, bl) <= tolerance / 2 ||
-            distanceToSegment(localPoint, bl, tl) <= tolerance / 2;
+        for (var i = 0; i < 4; i++) {
+          if (distanceToSegment(localPoint, corners[i], corners[(i + 1) % 4]) <=
+              tolerance / 2) {
+            return true;
+          }
+        }
+        // Een gevulde rechthoek is ook binnenin aan te tikken
+        return fillColor != null && _isPointInPolygon(localPoint, corners);
 
       case PolygonElement(:final points, :final strokeWidth, :final fillColor):
         if (points.length < 3) return false;
@@ -575,10 +659,13 @@ class SketchPainter extends CustomPainter {
           scale(start),
           scale(end),
         ).inflate(scaleVal(strokeWidth.toDouble()));
-      case RectangleElement(:final start, :final end, :final strokeWidth):
-        return Rect.fromPoints(
-          scale(start),
-          scale(end),
+      case RectangleElement(:final strokeWidth):
+        final corners = rectangleCorners(element).map(scale).toList();
+        return Rect.fromLTRB(
+          corners.map((c) => c.dx).reduce(math.min),
+          corners.map((c) => c.dy).reduce(math.min),
+          corners.map((c) => c.dx).reduce(math.max),
+          corners.map((c) => c.dy).reduce(math.max),
         ).inflate(scaleVal(strokeWidth.toDouble()));
       case PolygonElement(:final points, :final strokeWidth):
         if (points.isEmpty) return Rect.zero;
