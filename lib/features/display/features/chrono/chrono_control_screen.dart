@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
 import 'package:hs_coaching_app/features/display/features/chrono/data/chrono_provider.dart';
 import 'package:hs_coaching_core/chrono/chrono.dart';
+import 'package:hs_coaching_core/chrono/chrono_laps.dart';
+import 'package:hs_coaching_app/features/display/features/chrono/domain/lane_keys.dart';
 import 'package:hs_coaching_app/features/display/features/chrono/presentation/chrono_screen_controller.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
 import 'package:hs_coaching_app/core/presentation/error_display.dart';
@@ -19,11 +22,39 @@ final countdownProvider = NotifierProvider<CountdownNotifier, int>(
   CountdownNotifier.new,
 );
 
-class ChronoControlScreen extends ConsumerWidget {
+class ChronoControlScreen extends ConsumerStatefulWidget {
   const ChronoControlScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChronoControlScreen> createState() =>
+      _ChronoControlScreenState();
+}
+
+class _ChronoControlScreenState extends ConsumerState<ChronoControlScreen> {
+  // Baanknoppen (ESP32 als USB-toetsenbord) werken zolang dit scherm open
+  // staat, los van welke widget focus heeft.
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_onKey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    super.dispose();
+  }
+
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    final lane = laneForKey(event.logicalKey);
+    if (lane == null) return false;
+    ref.read(chronoCommandsProvider).recordLap(lane: lane);
+    return true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final chronoAsync = ref.watch(chronoNotifierProvider);
 
     return ContentControlScreen(
@@ -159,12 +190,13 @@ class _ChronoView extends ConsumerWidget {
                   // Alleen klikbaar als status running is én we uit de countdown zijn
                   onPressed:
                       (status == ChronoStatus.running && !elapsed.isNegative)
-                      ? () => commands.lap(chrono, elapsed.inMilliseconds)
+                      ? () => commands.recordLap()
                       : null, // null zet de ElevatedButton automatisch op disabled
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primaryContainer,
                     foregroundColor: colorScheme.onPrimaryContainer,
-                    disabledBackgroundColor: colorScheme.surfaceContainerHighest,
+                    disabledBackgroundColor:
+                        colorScheme.surfaceContainerHighest,
                     disabledForegroundColor: colorScheme.onSurfaceVariant,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
@@ -172,7 +204,7 @@ class _ChronoView extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  child: Text('Ronde', style: buttonLabelStyle),
+                  child: Text('Lap', style: buttonLabelStyle),
                 ),
               ),
             ],
@@ -212,37 +244,77 @@ class _ChronoView extends ConsumerWidget {
             ),
           ),
 
+          SizedBox(height: metrics.spacingSm),
+          // Max laps: tussentijden + finale tijd per baan
+          Card(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: metrics.spacingMd),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.flag, color: colorScheme.onSurfaceVariant),
+                  SizedBox(width: metrics.spacingMd),
+                  Text(
+                    'Max laps:',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  SizedBox(width: metrics.spacingMd),
+                  DropdownButton<int?>(
+                    value: chrono.maxLaps,
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('No limit'),
+                      ),
+                      for (var i = 1; i <= 10; i++)
+                        DropdownMenuItem(value: i, child: Text('$i')),
+                    ],
+                    onChanged: (val) => commands.setMaxLaps(val),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           SizedBox(height: metrics.spacingLg),
 
           // Rondetijden Lijst
-          if (chrono.laps.isNotEmpty) ...[
+          if (chrono.lapTimes.isNotEmpty) ...[
             const Divider(),
-            Text('Rondetijden', style: typography.headlineSm),
+            Text('Lap times', style: typography.headlineSm),
             SizedBox(height: metrics.gutter),
             Expanded(
-              child: ListView.builder(
-                itemCount: chrono.laps.length,
-                itemBuilder: (context, index) {
-                  final lapTotal = chrono.laps[index];
-                  final previousLapTotal = index > 0
-                      ? chrono.laps[index - 1]
-                      : 0;
-                  final lapTime = lapTotal - previousLapTotal;
-
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: colorScheme.surfaceContainerHighest,
-                      foregroundColor: colorScheme.onSurface,
-                      child: Text('${index + 1}'),
-                    ),
-                    title: Text(
-                      'Rondetijd: ${_formatDuration(Duration(milliseconds: lapTime))}',
-                      style: typography.dataPoint,
-                    ),
-                    trailing: Text(
-                      'Totaal: ${_formatDuration(Duration(milliseconds: lapTotal))}',
-                      style: typography.dataPoint,
-                    ),
+              child: Builder(
+                builder: (context) {
+                  final rows = chronoLapRows(
+                    chrono.lapTimes,
+                    maxLaps: chrono.maxLaps,
+                  );
+                  return ListView.builder(
+                    itemCount: rows.length,
+                    itemBuilder: (context, index) {
+                      final row = rows[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: row.lane == null
+                              ? colorScheme.surfaceContainerHighest
+                              : colorScheme.secondaryContainer,
+                          foregroundColor: row.lane == null
+                              ? colorScheme.onSurface
+                              : colorScheme.onSecondaryContainer,
+                          child: Text('${row.lane ?? row.number}'),
+                        ),
+                        title: Text(
+                          '${chronoLapLabel(row, maxLaps: chrono.maxLaps)}: '
+                          '${_formatDuration(Duration(milliseconds: row.splitMillis))}',
+                          style: typography.dataPoint,
+                        ),
+                        trailing: Text(
+                          'Total: ${_formatDuration(Duration(milliseconds: row.totalMillis))}',
+                          style: typography.dataPoint,
+                        ),
+                      );
+                    },
                   );
                 },
               ),
