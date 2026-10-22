@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hs_coaching_core/chrono/chrono.dart';
 import 'package:hs_coaching_core/chrono/chrono_repository.dart' as core;
 
@@ -19,20 +20,25 @@ class DisplayChronoRepository extends core.DisplayChronoRepository {
     int countdownMillis = 0,
   }) async {
     final eventTime = nowServerMillis + countdownMillis;
+    // Merge: bestaande rondetijden blijven staan.
     await chronoSettingsRef.set({
       'status': ChronoStatus.running.name,
       'authoritativeStartTimeMillis': eventTime,
       'accumulatedElapsedMillis': currentChrono.accumulatedElapsedMillis,
-      'laps': currentChrono.laps, // Behoud bestaande rondes
-    });
+    }, SetOptions(merge: true));
   }
 
-  Future<void> pause(Chrono currentChrono, {required int nowServerMillis}) async {
+  Future<void> pause(
+    Chrono currentChrono, {
+    required int nowServerMillis,
+  }) async {
     if (currentChrono.status != ChronoStatus.running) return;
 
-    final newlyElapsed = nowServerMillis - currentChrono.authoritativeStartTimeMillis;
+    final newlyElapsed =
+        nowServerMillis - currentChrono.authoritativeStartTimeMillis;
     final totalAccumulated =
-        currentChrono.accumulatedElapsedMillis + (newlyElapsed > 0 ? newlyElapsed : 0);
+        currentChrono.accumulatedElapsedMillis +
+        (newlyElapsed > 0 ? newlyElapsed : 0);
 
     await chronoSettingsRef.update({
       'status': ChronoStatus.paused.name,
@@ -40,16 +46,27 @@ class DisplayChronoRepository extends core.DisplayChronoRepository {
     });
   }
 
-  Future<void> lap(Chrono currentChrono, List<int> newLaps) async {
-    await chronoSettingsRef.update({'laps': newLaps});
+  /// arrayUnion i.p.v. de hele lijst herschrijven: twee baanknoppen vlak na
+  /// elkaar mogen elkaars tijd niet overschrijven.
+  Future<void> addLap(ChronoLap lap) async {
+    await chronoSettingsRef.update({
+      'lapTimes': FieldValue.arrayUnion([lap.toJson()]),
+    });
   }
 
-  Future<void> reset() async {
+  /// Null = geen maximum.
+  Future<void> setMaxLaps(int? maxLaps) async {
+    await chronoSettingsRef.set({'maxLaps': maxLaps}, SetOptions(merge: true));
+  }
+
+  /// [maxLaps] blijft staan: het is een instelling, geen resultaat.
+  Future<void> reset({int? maxLaps}) async {
     await chronoSettingsRef.set({
+      'maxLaps': maxLaps,
       'status': ChronoStatus.stopped.name,
       'authoritativeStartTimeMillis': 0,
       'accumulatedElapsedMillis': 0,
-      'laps': <int>[], // Rondes resetten
+      'lapTimes': <Map<String, dynamic>>[], // Rondes resetten
     });
   }
 }

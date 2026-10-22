@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_core/chrono/chrono.dart';
+import 'package:hs_coaching_core/chrono/chrono_laps.dart';
 import 'package:hs_coaching_core/core/providers/display_device_ids_provider.dart';
 import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_core/core/providers/server_time_offset_provider.dart';
@@ -69,9 +70,11 @@ class ChronoCommands {
     final notifier = ref.read(chronoNotifierProvider.notifier);
 
     final nowServerMillis = _nowServerMillis;
-    final newlyElapsed = nowServerMillis - currentChrono.authoritativeStartTimeMillis;
+    final newlyElapsed =
+        nowServerMillis - currentChrono.authoritativeStartTimeMillis;
     final totalAccumulated =
-        currentChrono.accumulatedElapsedMillis + (newlyElapsed > 0 ? newlyElapsed : 0);
+        currentChrono.accumulatedElapsedMillis +
+        (newlyElapsed > 0 ? newlyElapsed : 0);
 
     notifier.setOptimistic(
       currentChrono.copyWith(
@@ -88,15 +91,40 @@ class ChronoCommands {
     }
   }
 
-  Future<void> lap(Chrono currentChrono, int elapsedMillis) async {
-    final repository = ref.read(chronoRepositoryProvider);
-    final notifier = ref.read(chronoNotifierProvider.notifier);
+  /// Neemt een tijd op: [lane] null voor de Lap-knop, anders het baannummer
+  /// van een baanknop. Doet niets als de chrono niet loopt of nog aftelt, als
+  /// die baan zijn maximum laps heeft, of bij een dubbele druk op dezelfde
+  /// baan (zie `isLapAccepted`).
+  Future<void> recordLap({int? lane}) async {
+    // Tijd op het moment van de druk, niet die van de laatste schermtik.
+    final nowServerMillis = _nowServerMillis;
+    final current = ref.read(chronoNotifierProvider).value;
+    if (current == null || current.status != ChronoStatus.running) return;
 
-    final newLaps = List<int>.from(currentChrono.laps)..add(elapsedMillis);
-    notifier.setOptimistic(currentChrono.copyWith(laps: newLaps));
+    final elapsedMillis = chronoElapsedMillisAt(current, nowServerMillis);
+    if (elapsedMillis < 0) return;
+    if (!isLapAccepted(current, lane, elapsedMillis)) return;
+
+    final lap = ChronoLap(elapsedMillis: elapsedMillis, lane: lane);
+    ref
+        .read(chronoNotifierProvider.notifier)
+        .setOptimistic(current.copyWith(lapTimes: [...current.lapTimes, lap]));
 
     try {
-      await repository.lap(currentChrono, newLaps);
+      await ref.read(chronoRepositoryProvider).addLap(lap);
+    } catch (e) {
+      ref.invalidate(chronoNotifierProvider);
+      rethrow;
+    }
+  }
+
+  Future<void> setMaxLaps(int? maxLaps) async {
+    final current = ref.read(chronoNotifierProvider).value ?? const Chrono();
+    ref
+        .read(chronoNotifierProvider.notifier)
+        .setOptimistic(current.copyWith(maxLaps: maxLaps));
+    try {
+      await ref.read(chronoRepositoryProvider).setMaxLaps(maxLaps);
     } catch (e) {
       ref.invalidate(chronoNotifierProvider);
       rethrow;
@@ -105,8 +133,11 @@ class ChronoCommands {
 
   Future<void> reset() async {
     final repository = ref.read(chronoRepositoryProvider);
-    ref.read(chronoNotifierProvider.notifier).setOptimistic(const Chrono());
-    await repository.reset();
+    final maxLaps = ref.read(chronoNotifierProvider).value?.maxLaps;
+    ref
+        .read(chronoNotifierProvider.notifier)
+        .setOptimistic(Chrono(maxLaps: maxLaps));
+    await repository.reset(maxLaps: maxLaps);
   }
 }
 
