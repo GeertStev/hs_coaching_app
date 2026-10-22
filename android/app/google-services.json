@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "173364683849",
+    "project_id": "hs-coaching",
+    "storage_bucket": "hs-coaching.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:173364683849:android:bf0652ae08616cb9bbcb98",
+        "android_client_info": {
+          "package_name": "com.example.hs_coaching_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0ZkN8MtMWT0lMqdKOGdzX-6jQbQq9hZY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:173364683849:android:a48e6b3d9cea9ab6bbcb98",
+        "android_client_info": {
+          "package_name": "com.example.hs_coaching_client"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0ZkN8MtMWT0lMqdKOGdzX-6jQbQq9hZY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:173364683849:android:32b52e8f02578b09bbcb98",
+        "android_client_info": {
+          "package_name": "st.geert.hs_coach"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0ZkN8MtMWT0lMqdKOGdzX-6jQbQq9hZY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
