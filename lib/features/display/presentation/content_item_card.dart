@@ -42,6 +42,10 @@ class ContentItemCard extends StatelessWidget {
           ..showSnackBar(
             SnackBar(
               content: Text('"$title" archived.'),
+              // Met een actie blijft een SnackBar standaard staan; na 5 s
+              // mag hij weg.
+              duration: const Duration(seconds: 5),
+              persist: false,
               action: SnackBarAction(label: 'UNDO', onPressed: onUndo),
             ),
           );

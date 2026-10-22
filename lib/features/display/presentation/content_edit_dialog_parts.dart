@@ -8,12 +8,18 @@ class TextContentEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       minLines: 4,
       maxLines: 10,
       textCapitalization: TextCapitalization.sentences,
       decoration: const InputDecoration(labelText: 'Text to display'),
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return 'Please enter a text.';
+        }
+        return null;
+      },
     );
   }
 }
