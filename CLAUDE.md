@@ -8,7 +8,7 @@ senior Flutter dev, refactoring toward clean, testable architecture with Riverpo
 
 Extra stack on top of core: `firebase_auth`, `firebase_messaging`, `perfect_freehand` (sketch),
 `image_picker`/`image_cropper`/`file_picker`, `shared_preferences` (theme preference only),
-`custom_lint` + `riverpod_lint`. `riverpod_generator`/`riverpod_annotation` are installed but unused.
+`custom_lint` + `riverpod_lint`. Providers are hand-written (see core's `CLAUDE.md`); no Riverpod codegen.
 
 ## Layout
 `lib/features/<feature>/{data,domain,presentation}`, cross-cutting code in `lib/core/`
