@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_core/core/providers/display_device_ids_provider.dart';
+import 'package:hs_coaching_app/features/display/features/tag_and_search/data/tag_maintenance.dart';
 import 'package:hs_coaching_core/image/display_image.dart';
 import 'package:hs_coaching_core/image/display_image_repository.dart';
 
@@ -27,7 +28,8 @@ final displayImageRepositoryProvider = Provider<DisplayImageRepository>((ref) {
 /// This collection contains all historical image documents. A separate document at
 /// `/clubs/{clubId}/displays/{displayId}/settings/image` holds the ID of the
 /// currently active image in a field named `currentId`.
-class DisplayImageRepository extends DisplayImageRepositoryBase {
+class DisplayImageRepository extends DisplayImageRepositoryBase
+    implements TagMaintenance {
   DisplayImageRepository({
     required super.firestore,
     required FirebaseStorage storage,
@@ -150,4 +152,17 @@ class DisplayImageRepository extends DisplayImageRepositoryBase {
       'status': DisplayImageStatus.active.name,
     });
   }
+
+  @override
+  Future<void> renameTag(String from, String to) => renameTagInCollection(
+    firestore: firestore,
+    collectionPath: imagesRef.path,
+    from: from,
+    to: to,
+    tagListDoc: currentImageRef,
+    tagListField: 'imageTags',
+  );
+
+  @override
+  Future<void> deleteTag(String tag) => renameTag(tag, '');
 }

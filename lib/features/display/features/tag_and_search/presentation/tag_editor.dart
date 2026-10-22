@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hs_coaching_app/core/theme/app_theme.dart';
+import 'package:hs_coaching_app/features/display/features/tag_and_search/domain/tag_ops.dart';
 
 class ReusableTagEditor extends StatefulWidget {
   const ReusableTagEditor({
@@ -36,9 +37,11 @@ class _ReusableTagEditorState extends State<ReusableTagEditor> {
     super.dispose();
   }
 
-  void _addTag(String tag) {
-    tag = tag.trim();
-    if (tag.isNotEmpty && !_tags.contains(tag)) {
+  void _addTag(String input) {
+    // Bestaat de tag al in een andere schrijfwijze ("defense" vs "Defense"),
+    // dan wordt de bestaande spelling hergebruikt.
+    final tag = canonicalTag(input, [..._tags, ...widget.allTags]);
+    if (tag.isNotEmpty && !containsTag(_tags, tag)) {
       setState(() {
         _tags.add(tag);
       });
@@ -66,17 +69,13 @@ class _ReusableTagEditorState extends State<ReusableTagEditor> {
         Autocomplete<String>(
           focusNode: _tagFocusNode,
           textEditingController: _tagInputController,
-          optionsBuilder: (TextEditingValue textEditingValue) {
-            if (textEditingValue.text.isEmpty) {
-              return const Iterable<String>.empty();
-            }
-            return widget.allTags.where((String option) {
-              return option.toLowerCase().contains(
-                    textEditingValue.text.toLowerCase(),
-                  ) &&
-                  !_tags.contains(option);
-            });
-          },
+          // Ook bij een leeg veld alle tags voorstellen, zodat de lijst
+          // meteen opent bij het aantikken.
+          optionsBuilder: (TextEditingValue textEditingValue) => tagSuggestions(
+            allTags: widget.allTags,
+            current: _tags,
+            query: textEditingValue.text,
+          ),
           onSelected: _addTag,
           fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
             return TextField(

@@ -9,6 +9,8 @@ import 'package:hs_coaching_core/training/training_step_phase.dart';
 import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
+import 'package:hs_coaching_app/features/display/features/tag_and_search/domain/tag_ops.dart';
+import 'package:hs_coaching_app/features/display/features/tag_and_search/presentation/tag_filter_bar.dart';
 import 'package:hs_coaching_app/features/display/features/training/data/training_provider.dart';
 import 'package:hs_coaching_app/features/display/features/training/domain/training_template.dart';
 import 'package:hs_coaching_app/features/display/features/training/presentation/training_children_editor.dart';
@@ -116,9 +118,28 @@ String _kindGroupLabel(TrainingTemplateKind kind) => switch (kind) {
 class _ListTab extends ConsumerWidget {
   const _ListTab();
 
+  Future<void> _editTemplate(
+    BuildContext context,
+    WidgetRef ref,
+    TrainingTemplate template,
+  ) async {
+    final details = await showTrainingTemplateDetailsDialog(
+      context,
+      dialogTitle: 'Edit template',
+      initialTitle: template.title,
+      initialTags: template.tags,
+      allTags: ref.read(trainingTemplateTagCountsProvider).keys.toList(),
+    );
+    if (details == null) return;
+    await ref
+        .read(trainingCommandsProvider)
+        .updateTemplate(template.id, title: details.title, tags: details.tags);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final templatesAsync = ref.watch(trainingTemplatesProvider);
+    final selectedTags = ref.watch(selectedTemplateTagsProvider);
     final commands = ref.read(trainingCommandsProvider);
 
     return templatesAsync.when(
@@ -127,42 +148,67 @@ class _ListTab extends ConsumerWidget {
           return const Center(child: Text('Nog geen templates opgeslagen.'));
         }
 
-        return ListView(
-          padding: const EdgeInsets.all(12),
+        final visible = templates
+            .where((t) => matchesAllTags(t.tags, selectedTags))
+            .toList();
+
+        return Column(
           children: [
-            for (final kind in TrainingTemplateKind.values)
-              if (templates.any((t) => t.kind == kind)) ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    _kindGroupLabel(kind),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+            ReusableTagFilterBar(
+              tagCounts: ref.watch(trainingTemplateTagCountsProvider),
+              selectedTagsProvider: selectedTemplateTagsProvider,
+              tagMaintenanceProvider: trainingRepositoryProvider,
+            ),
+            Expanded(
+              child: visible.isEmpty
+                  ? const Center(
+                      child: Text('No templates with all selected tags.'),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(12),
+                      children: [
+                        for (final kind in TrainingTemplateKind.values)
+                          if (visible.any((t) => t.kind == kind)) ...[
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                _kindGroupLabel(kind),
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            for (final template
+                                in visible.where((t) => t.kind == kind).toList()
+                                  ..sort((a, b) => a.title.compareTo(b.title)))
+                              Card(
+                                child: ListTile(
+                                  title: Text(template.title),
+                                  subtitle: template.tags.isEmpty
+                                      ? null
+                                      : Text(template.tags.join(' · ')),
+                                  onTap: () =>
+                                      _editTemplate(context, ref, template),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.delete_outline),
+                                    onPressed: () async {
+                                      final confirmed =
+                                          await showTrainingDeleteConfirmDialog(
+                                            context,
+                                            itemLabel: template.title,
+                                          );
+                                      if (confirmed == true) {
+                                        await commands.deleteTemplate(
+                                          template.id,
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ),
+                          ],
+                      ],
                     ),
-                  ),
-                ),
-                for (final template
-                    in templates.where((t) => t.kind == kind).toList()
-                      ..sort((a, b) => a.title.compareTo(b.title)))
-                  Card(
-                    child: ListTile(
-                      title: Text(template.title),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () async {
-                          final confirmed =
-                              await showTrainingDeleteConfirmDialog(
-                                context,
-                                itemLabel: template.title,
-                              );
-                          if (confirmed == true) {
-                            await commands.deleteTemplate(template.id);
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-              ],
+            ),
           ],
         );
       },

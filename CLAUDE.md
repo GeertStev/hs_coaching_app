@@ -24,7 +24,7 @@ On top of the shared layout in core's `CLAUDE.md`:
 clubs/{clubId}                  # Club
   members/{uid}                 # ClubMembership: role (player|trainer|clubAdmin), status (pending|active),
                                 #   teamIds, uid+clubId as fields for collection-group queries
-  teams/{teamId}  invites/{code}  tabataPresets/{id}
+  teams/{teamId}  invites/{code}  tabataPresets/{id}  trainingTemplates/{id}
   timerExercises/{id}  timerSets/{id}   # legacy timer library, code removed; data + rules remain
 inviteCodes/{code}              # get-only mirror for the join flow (the code is the secret)
 users/{uid}                     # AppUser; profile pictures in Storage at user_pictures/{uid}.jpg

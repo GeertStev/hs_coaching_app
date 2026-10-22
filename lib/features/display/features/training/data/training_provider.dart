@@ -7,6 +7,8 @@ import 'package:hs_coaching_core/training/training_flatten.dart';
 import 'package:hs_coaching_core/training/training_navigation.dart';
 import 'package:hs_coaching_core/training/training_status.dart';
 import 'package:hs_coaching_core/training/training_session_progress.dart';
+import 'package:hs_coaching_app/features/display/application/search_service.dart';
+import 'package:hs_coaching_app/features/display/features/tag_and_search/domain/tag_ops.dart';
 import 'package:hs_coaching_app/features/display/features/training/data/training_repository.dart';
 import 'package:hs_coaching_app/features/display/features/training/domain/training_template.dart';
 
@@ -39,6 +41,18 @@ final trainingNotifierProvider =
 final trainingTemplatesProvider = StreamProvider<List<TrainingTemplate>>((ref) {
   return ref.watch(trainingRepositoryProvider).watchTemplates();
 });
+
+/// Tags van de templates met hun aantal, voor de filterbalk.
+final trainingTemplateTagCountsProvider = Provider<Map<String, int>>((ref) {
+  final templates = ref.watch(trainingTemplatesProvider).value ?? const [];
+  return countTags(templates.map((template) => template.tags));
+});
+
+/// Geselecteerde filter-tags in de LIST-tab.
+final selectedTemplateTagsProvider =
+    NotifierProvider<TagSelectionNotifier, Set<String>>(
+      TagSelectionNotifier.new,
+    );
 
 /// Commands met optimistische updates + rollback via invalidate, naar het
 /// voorbeeld van `TabataCommands`.
@@ -258,11 +272,22 @@ class TrainingCommands {
     String title,
     TrainingTemplateKind kind,
     Map<String, dynamic> payload,
-    int height,
-  ) {
+    int height, {
+    List<String> tags = const [],
+  }) {
     return ref
         .read(trainingRepositoryProvider)
-        .saveTemplate(title, kind, payload, height);
+        .saveTemplate(title, kind, payload, height, tags: tags);
+  }
+
+  Future<void> updateTemplate(
+    String templateId, {
+    required String title,
+    required List<String> tags,
+  }) {
+    return ref
+        .read(trainingRepositoryProvider)
+        .updateTemplate(templateId, title: title, tags: tags);
   }
 
   Future<void> deleteTemplate(String templateId) {

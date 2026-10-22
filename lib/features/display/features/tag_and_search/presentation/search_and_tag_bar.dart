@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:hs_coaching_app/features/display/application/search_service.dart';
+import 'package:hs_coaching_app/features/display/features/tag_and_search/data/tag_maintenance.dart';
 import 'package:hs_coaching_app/features/display/features/tag_and_search/presentation/reusable_search_bar.dart';
 import 'package:hs_coaching_app/features/display/features/tag_and_search/presentation/tag_filter_bar.dart';
 
@@ -9,14 +11,17 @@ class SearchAndTagBar extends ConsumerStatefulWidget {
     super.key,
     required this.searchQueryProvider,
     required this.searchLabelText,
-    required this.allTagsProvider,
-    required this.selectedTagProvider,
+    required this.tagCounts,
+    required this.selectedTagsProvider,
+    required this.tagMaintenanceProvider,
   });
 
   final NotifierProvider<SearchNotifier, String> searchQueryProvider;
   final String searchLabelText;
-  final StreamProvider<List<String>> allTagsProvider;
-  final NotifierProvider<TagNotifier, String?> selectedTagProvider;
+  final Map<String, int> tagCounts;
+  final NotifierProvider<TagSelectionNotifier, Set<String>>
+  selectedTagsProvider;
+  final ProviderListenable<TagMaintenance> tagMaintenanceProvider;
 
   @override
   ConsumerState<SearchAndTagBar> createState() => _SearchAndTagBarState();
@@ -48,8 +53,9 @@ class _SearchAndTagBarState extends ConsumerState<SearchAndTagBar> {
   @override
   Widget build(BuildContext context) {
     final tagBar = ReusableTagFilterBar(
-      allTagsProvider: widget.allTagsProvider,
-      selectedTagProvider: widget.selectedTagProvider,
+      tagCounts: widget.tagCounts,
+      selectedTagsProvider: widget.selectedTagsProvider,
+      tagMaintenanceProvider: widget.tagMaintenanceProvider,
     );
 
     return AnimatedSwitcher(

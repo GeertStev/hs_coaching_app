@@ -21,7 +21,7 @@ class SketchList extends ConsumerWidget {
     WidgetRef ref,
     Sketch sketch,
   ) async {
-    final allTags = ref.read(allSketchTagsProvider).value ?? [];
+    final allTags = ref.read(sketchTagCountsProvider).keys.toList();
     /*String? selectedBackgroundUrl = sketch.backgroundUrl;
     final allBackgrounds = ref.read(sketchBackgroundsProvider).value ?? [];*/
 
@@ -66,12 +66,14 @@ class SketchList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ContentList<Sketch>(
-      itemsProvider: sketchListStreamProvider.call,
+      itemsProvider: sketchListStreamProvider,
       searchQueryProvider: searchQueryProvider,
       itemTypeSingular: 'sketch',
       itemTypePlural: 'sketches',
-      allTagsProvider: allSketchTagsProvider,
-      selectedTagProvider: selectedTagProvider,
+      tagCountsProvider: sketchTagCountsProvider,
+      selectedTagsProvider: selectedTagsProvider,
+      tagMaintenanceProvider: sketchRepositoryProvider,
+      tagsOf: (sketch) => sketch.tags,
       emptyStateMessage: 'No sketches yet. Tap + to create one!',
       filterPredicate: (sketch, query) {
         final titleMatch = sketch.title.toLowerCase().contains(query);

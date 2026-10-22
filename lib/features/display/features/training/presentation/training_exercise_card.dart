@@ -69,19 +69,21 @@ class TrainingExerciseCard extends ConsumerWidget {
   }
 
   Future<void> _saveAsTemplate(BuildContext context, WidgetRef ref) async {
-    final title = await showTrainingTitleDialog(
+    final details = await showTrainingTemplateDetailsDialog(
       context,
-      title: 'Bewaar als template',
-      initial: exercise.title,
+      dialogTitle: 'Bewaar als template',
+      initialTitle: exercise.title,
+      allTags: ref.read(trainingTemplateTagCountsProvider).keys.toList(),
     );
-    if (title == null || title.isEmpty) return;
+    if (details == null) return;
     await ref
         .read(trainingCommandsProvider)
         .saveTemplate(
-          title,
+          details.title,
           TrainingTemplateKind.exercise,
           exercise.toJson(),
           subtreeHeight(TrainingNode.exercise(exercise: exercise)),
+          tags: details.tags,
         );
   }
 

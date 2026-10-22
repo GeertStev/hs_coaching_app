@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_core/core/providers/display_device_ids_provider.dart';
+import 'package:hs_coaching_app/features/display/features/tag_and_search/data/tag_maintenance.dart';
 import 'package:hs_coaching_core/text/display_text.dart';
 import 'package:hs_coaching_core/text/display_text_repository.dart';
 
@@ -23,7 +24,8 @@ final displayTextRepositoryProvider = Provider<DisplayTextRepository>((ref) {
 /// This collection contains all historical text documents. A separate document at
 /// `/clubs/{clubId}/displays/{displayId}/settings/text` holds the ID of the
 /// currently active text in a field named `currentId`.
-class DisplayTextRepository extends DisplayTextRepositoryBase {
+class DisplayTextRepository extends DisplayTextRepositoryBase
+    implements TagMaintenance {
   DisplayTextRepository({
     required super.firestore,
     required super.clubId,
@@ -155,4 +157,17 @@ class DisplayTextRepository extends DisplayTextRepositoryBase {
       'status': DisplayTextStatus.active.name,
     });
   }
+
+  @override
+  Future<void> renameTag(String from, String to) => renameTagInCollection(
+    firestore: firestore,
+    collectionPath: textsRef.path,
+    from: from,
+    to: to,
+    tagListDoc: currentTextRef,
+    tagListField: 'textTags',
+  );
+
+  @override
+  Future<void> deleteTag(String tag) => renameTag(tag, '');
 }
