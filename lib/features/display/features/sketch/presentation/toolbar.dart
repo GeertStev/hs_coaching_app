@@ -34,6 +34,18 @@ class Toolbar extends ConsumerWidget {
       ref.read(activeToolProvider.notifier).setTool(tool);
     }
 
+    // Een stijlwijziging in de toolbar geldt ook voor het geselecteerde element
+    void restyleSelection({Color? color, int? strokeWidth, bool? filled}) {
+      ref
+          .read(drawingSessionProvider.notifier)
+          .restyleSelection(
+            sketchId,
+            color: color,
+            strokeWidth: strokeWidth,
+            filled: filled,
+          );
+    }
+
     return Wrap(
       spacing: 8.0,
       runSpacing: 8.0,
@@ -90,7 +102,7 @@ class Toolbar extends ConsumerWidget {
               ),
               _ToolButton(
                 icon: Icons.pentagon_outlined,
-                label: 'Veelhoek',
+                label: 'Polygon',
                 isSelected: activeTool == DrawingTool.polygon,
                 onPressed: () => changeTool(DrawingTool.polygon),
               ),
@@ -119,39 +131,24 @@ class Toolbar extends ConsumerWidget {
                     icon: const SizedBox.shrink(),
                     underline: const SizedBox.shrink(),
                     selectedItemBuilder: (context) {
-                      // ToDo list colors, maybe editable list?
-                      return [
-                            Colors.white,
-                            Colors.black,
-                            Colors.amber,
-                            Colors.red,
-                            Colors.green,
-                            Colors.blue,
-                          ]
+                      return sketchColors
                           .map((c) => ColorSelectCircle(color: selectedColor))
                           .toList();
                     },
-                    items:
-                        [
-                              Colors.white,
-                              Colors.black,
-                              Colors.amber,
-                              Colors.red,
-                              Colors.green,
-                              Colors.blue,
-                            ]
-                            .map(
-                              (itemColor) => DropdownMenuItem(
-                                value: itemColor,
-                                child: ColorSelectCircle(color: itemColor),
-                              ),
-                            )
-                            .toList(),
+                    items: sketchColors
+                        .map(
+                          (itemColor) => DropdownMenuItem(
+                            value: itemColor,
+                            child: ColorSelectCircle(color: itemColor),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (color) {
                       if (color != null) {
                         ref
                             .read(selectedColorProvider.notifier)
                             .setColor(color);
+                        restyleSelection(color: color);
                       }
                     },
                   ),
@@ -165,7 +162,10 @@ class Toolbar extends ConsumerWidget {
                   color: isFilled ? selectedColor : null,
                 ),
                 tooltip: 'Fill Shape',
-                onPressed: () => ref.read(fillShapeProvider.notifier).toggle(),
+                onPressed: () {
+                  ref.read(fillShapeProvider.notifier).toggle();
+                  restyleSelection(filled: !isFilled);
+                },
               ),
 
               // Stroke width
@@ -178,7 +178,7 @@ class Toolbar extends ConsumerWidget {
                     icon: const Icon(Icons.line_weight),
                     menuWidth: 48,
                     underline: const SizedBox.shrink(),
-                    items: [1, 2, 4]
+                    items: sketchStrokeWidths
                         .map(
                           (width) => DropdownMenuItem(
                             value: width,
@@ -191,6 +191,7 @@ class Toolbar extends ConsumerWidget {
                         ref
                             .read(strokeWidthProvider.notifier)
                             .setStrokeWidth(value);
+                        restyleSelection(strokeWidth: value);
                       }
                     },
                   ),

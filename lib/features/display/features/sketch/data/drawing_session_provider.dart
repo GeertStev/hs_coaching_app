@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/domain/command.dart';
+import 'package:hs_coaching_app/features/display/features/sketch/domain/element_editing.dart';
 import 'package:hs_coaching_core/sketch/sketch_element.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/tools/polygon_tool.dart';
 import 'package:uuid/uuid.dart';
@@ -61,10 +62,90 @@ class DrawingSessionNotifier extends Notifier<DrawingSessionState> {
     if (result.clearSelection) {
       ref.read(selectedElementIdProvider.notifier).deselect();
     } else if (result.selectedElementId != null) {
+      final isNewSelection =
+          result.selectedElementId != ref.read(selectedElementIdProvider);
       ref
           .read(selectedElementIdProvider.notifier)
           .select(result.selectedElementId);
+      if (isNewSelection) _syncToolbarWithSelection(sketchId);
     }
+  }
+
+  SketchElement? _selectedElement(String sketchId) {
+    final id = ref.read(selectedElementIdProvider);
+    if (id == null) return null;
+    final elements = ref.read(sketchElementsStreamProvider(sketchId)).value;
+    for (final element in elements ?? const <SketchElement>[]) {
+      if (element.id == id) return element;
+    }
+    return null;
+  }
+
+  /// Toont kleur, dikte en vulling van het geselecteerde element in de toolbar.
+  void _syncToolbarWithSelection(String sketchId) {
+    final selected = _selectedElement(sketchId);
+    final (Color, int, Color?)? style = switch (selected) {
+      PathElement(:final color, :final strokeWidth) => (
+        color,
+        strokeWidth,
+        null,
+      ),
+      ArrowElement(:final color, :final strokeWidth) => (
+        color,
+        strokeWidth,
+        null,
+      ),
+      LineElement(:final color, :final strokeWidth) => (
+        color,
+        strokeWidth,
+        null,
+      ),
+      RectangleElement(:final color, :final strokeWidth, :final fillColor) ||
+      PolygonElement(:final color, :final strokeWidth, :final fillColor) ||
+      CircleElement(
+        :final color,
+        :final strokeWidth,
+        :final fillColor,
+      ) => (color, strokeWidth, fillColor),
+      IconElement() || null => null,
+    };
+    if (style == null) return;
+    final (color, strokeWidth, fillColor) = style;
+
+    // Alleen waarden die de toolbar kent, anders faalt de dropdown
+    for (final option in sketchColors) {
+      if (option.toARGB32() == color.toARGB32()) {
+        ref.read(selectedColorProvider.notifier).setColor(option);
+      }
+    }
+    if (sketchStrokeWidths.contains(strokeWidth)) {
+      ref.read(strokeWidthProvider.notifier).setStrokeWidth(strokeWidth);
+    }
+    if (isFillable(selected!)) {
+      ref.read(fillShapeProvider.notifier).set(fillColor != null);
+    }
+  }
+
+  /// Past kleur, dikte of vulling toe op het geselecteerde element (met undo).
+  /// Doet niets als er niets geselecteerd is.
+  void restyleSelection(
+    String sketchId, {
+    Color? color,
+    int? strokeWidth,
+    bool? filled,
+  }) {
+    final selected = _selectedElement(sketchId);
+    if (selected == null) return;
+    final updated = applyStyle(
+      selected,
+      color: color,
+      strokeWidth: strokeWidth,
+      filled: filled,
+    );
+    if (updated == selected) return;
+    ref
+        .read(commandHistoryProvider(sketchId).notifier)
+        .execute(UpdateElementCommand(selected, updated));
   }
 
   void onPanStart(
