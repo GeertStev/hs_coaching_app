@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_core/team/team_repository.dart';
 import 'package:hs_coaching_app/features/display/features/team/presentation/display_team_controller.dart';
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
 class TeamPreviewDialog extends ConsumerWidget {
   const TeamPreviewDialog({super.key});
@@ -11,13 +12,7 @@ class TeamPreviewDialog extends ConsumerWidget {
     final teamsAsync = ref.watch(teamsProvider);
 
     // Luister ook hier in de dialog voor fouten, zodat de gebruiker direct feedback heeft
-    ref.listen<AsyncValue<void>>(teamControllerProvider, (_, state) {
-      if (state.hasError && !state.isLoading) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fout bij het casten: ${state.error}')),
-        );
-      }
-    });
+    listenForMutationErrors(ref, context, teamControllerProvider);
 
     return AlertDialog(
       title: const Text('Preview team'),
@@ -28,9 +23,9 @@ class TeamPreviewDialog extends ConsumerWidget {
             height: 100,
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (err, stack) => Text(
-            'Error while loading: $err',
-            style: const TextStyle(color: Colors.red),
+          error: (err, stack) => ErrorView(
+            error: err,
+            onRetry: () => ref.invalidate(teamsProvider),
           ),
           data: (teams) {
             final whiteTeam = teams[0];

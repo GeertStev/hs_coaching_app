@@ -4,6 +4,7 @@ import 'package:hs_coaching_app/features/display/data/display_global_settings_re
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_data_providers.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_canvas.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/toolbar.dart';
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
 class SketchScreen extends ConsumerStatefulWidget {
   const SketchScreen({super.key, required this.sketchId});
@@ -54,15 +55,22 @@ class _SketchScreenState extends ConsumerState<SketchScreen> {
                             loading: () => const Center(
                               child: CircularProgressIndicator(),
                             ),
-                            error: (error, stack) =>
-                                Center(child: Text('Error: $error')),
+                            error: (error, stack) => ErrorView(
+                              error: error,
+                              onRetry: () => ref.invalidate(
+                                sketchProvider(widget.sketchId),
+                              ),
+                            ),
                           );
                         },
                       ),
                     );
                   },
                   loading: () => const CircularProgressIndicator(),
-                  error: (error, stack) => Text('Error: $error'),
+                  error: (error, stack) => ErrorView(
+                    error: error,
+                    onRetry: () => ref.invalidate(globalSettingsProvider),
+                  ),
                 ),
               ),
             ),

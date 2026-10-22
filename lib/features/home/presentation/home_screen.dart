@@ -6,6 +6,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:hs_coaching_app/features/auth/data/auth_providers.dart';
 import 'package:hs_coaching_app/features/display/presentation/display_feature_screen.dart';
 import 'package:hs_coaching_app/features/profile/presentation/user_menu_button.dart';
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
 const assetName = 'assets/logo.svg';
 Widget appLogo(BuildContext context) {
@@ -246,8 +247,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return appUserAsync.when(
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, stack) =>
-          Scaffold(body: Center(child: Text('Er is iets fout gegaan: $err'))),
+      error: (err, stack) => Scaffold(
+        body: ErrorView(
+          error: err,
+          onRetry: () => ref.invalidate(appUserProvider),
+        ),
+      ),
       data: (user) {
         // Mocht de user écht niet bestaan in de database:
         if (user == null) {

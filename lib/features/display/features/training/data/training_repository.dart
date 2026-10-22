@@ -4,6 +4,7 @@ import 'package:hs_coaching_core/training/training.dart';
 import 'package:hs_coaching_core/training/training_status.dart';
 import 'package:hs_coaching_core/training/training_validation.dart';
 import 'package:hs_coaching_app/features/display/features/training/domain/training_template.dart';
+import 'package:hs_coaching_core/core/errors/user_message.dart';
 
 /// Gegooid door [TrainingRepository.saveTraining] wanneer de boom de
 /// max-diepte-3-invariant schendt — een verdedigingslinie op het
@@ -12,8 +13,9 @@ import 'package:hs_coaching_app/features/display/features/training/domain/traini
 /// §11). Zou bij correcte UI-code nooit mogen vuren; als het toch gebeurt,
 /// wijst dat op een bug in een sleep-/groepeerpad, niet op een verwachte
 /// afwijzing zoals [TrainingInvalidMoveException] in `training_tree.dart`.
-class TrainingShapeException implements Exception {
+class TrainingShapeException implements UserFacingException {
   TrainingShapeException(this.message);
+  @override
   final String message;
 
   @override
@@ -35,8 +37,8 @@ class TrainingRepository extends DisplayTrainingRepository {
   Future<void> saveTraining(Training training) async {
     if (!isValidTrainingTree(training)) {
       throw TrainingShapeException(
-        'De training overschrijdt de max-diepte-3 invariant en kan niet '
-        'opgeslagen worden.',
+        'This training exceeds the maximum depth of 3 and cannot be '
+        'saved.',
       );
     }
     await trainingSettingsRef.set(training.toJson());

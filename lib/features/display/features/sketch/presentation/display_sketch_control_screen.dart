@@ -10,6 +10,7 @@ import 'package:hs_coaching_app/features/display/presentation/content_edit_sheet
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/sketch_screen.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/presentation/widgets/sketch_list.dart';
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
 class SketchControlScreen extends ConsumerStatefulWidget {
   const SketchControlScreen({super.key});
@@ -74,13 +75,7 @@ class _SketchControlScreenState extends ConsumerState<SketchControlScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<void>>(sketchControllerProvider, (_, state) {
-      if (state.hasError && !state.isLoading) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(state.error.toString())));
-      }
-    });
+    listenForMutationErrors(ref, context, sketchControllerProvider);
     return ContentControlScreen(
       body: const SketchList(),
       addAction: (

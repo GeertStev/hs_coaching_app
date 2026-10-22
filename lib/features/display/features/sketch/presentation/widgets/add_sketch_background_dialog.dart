@@ -2,7 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart'; // Gebruik FilePicker in plaats van ImagePicker
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_data_providers.dart';
+import 'package:hs_coaching_core/core/errors/error_reporting.dart';
+import 'package:hs_coaching_core/core/errors/user_message.dart';
 
 class AddSketchBackgroundDialog extends ConsumerStatefulWidget {
   const AddSketchBackgroundDialog({super.key});
@@ -33,10 +36,13 @@ class _AddSketchBackgroundDialogState
           _fileName = result.files.single.name;
         });
       }
-    } catch (e) {
+    } catch (e, st) {
+      reportError(e, st, context: 'Sketch background: pick file');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fout bij selecteren bestand: $e')),
+        showErrorSnackBar(
+          context,
+          e,
+          message: 'Could not select the file. ${userMessage(e)}',
         );
       }
     }
@@ -64,13 +70,13 @@ class _AddSketchBackgroundDialogState
             title: _titleController.text.trim(),
           );
       if (mounted) Navigator.of(context).pop();
-    } catch (e) {
+    } catch (e, st) {
+      reportError(e, st, context: 'Sketch background: upload');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Upload mislukt: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
+        showErrorSnackBar(
+          context,
+          e,
+          message: 'Upload failed. ${userMessage(e)}',
         );
       }
     } finally {

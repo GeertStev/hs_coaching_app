@@ -164,7 +164,7 @@ Training moveNode(
     throw TrainingInvalidMoveException(
       nodeAt(training, from),
       toParent,
-      'Kan een knoop niet naar zijn eigen subboom verplaatsen',
+      'Cannot move an item into itself',
     );
   }
 
@@ -173,8 +173,8 @@ Training moveNode(
     throw TrainingInvalidMoveException(
       node,
       toParent,
-      'Deze plek kan dit niet bevatten (max-diepte-3 zou overschreden '
-      'worden)',
+      'This item cannot go here (it would exceed the maximum depth '
+      'of 3)',
     );
   }
 
@@ -215,7 +215,7 @@ Training groupWithTarget(
     throw TrainingInvalidMoveException(
       nodeAt(training, sourcePath),
       targetPath,
-      'Kan een knoop niet groeperen met zijn eigen voor- of nakomeling',
+      'Cannot group an item with its own parent or child',
     );
   }
 
@@ -276,8 +276,8 @@ Training _wrapIntoNewGroup(
     throw TrainingInvalidMoveException(
       newGroup,
       targetParent,
-      'Deze plek kan geen nieuwe groep bevatten (max-diepte-3 zou '
-      'overschreden worden)',
+      'A new group cannot go here (it would exceed the maximum depth '
+      'of 3)',
     );
   }
 
@@ -301,7 +301,7 @@ Training _mergeGroupIntoTarget(
     throw TrainingInvalidMoveException(
       sourceNode,
       targetPath,
-      'Deze groep past hier niet (zou de max-diepte-3 overschrijden)',
+      'This group does not fit here (it would exceed the maximum depth of 3)',
     );
   }
 

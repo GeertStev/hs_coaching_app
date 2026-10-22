@@ -10,20 +10,15 @@ import 'package:hs_coaching_app/features/display/presentation/content_edit_sheet
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
 import 'package:hs_coaching_app/features/display/features/image/presentation/widgets/image_list.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
 class ImageControlScreen extends ConsumerWidget {
   const ImageControlScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Optioneel: Luister naar errors van de controller om een SnackBar te tonen
-    ref.listen<AsyncValue<void>>(imageControllerProvider, (_, state) {
-      if (state.hasError && !state.isLoading) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(state.error.toString())));
-      }
-    });
+    // Toon een melding als een actie van de controller mislukt
+    listenForMutationErrors(ref, context, imageControllerProvider);
 
     Future<void> handleAddImage() async {
       File? imageFile;
