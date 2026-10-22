@@ -312,6 +312,7 @@ class _GroupPanel extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               _ValuePill(
+                label: 'Work',
                 items: numericWheelItems(
                   min: _kSecondsMin,
                   max: _kSecondsMax,
@@ -332,6 +333,7 @@ class _GroupPanel extends StatelessWidget {
                 ),
               ),
               _ValuePill(
+                label: 'Rest',
                 items: numericWheelItems(
                   min: _kSecondsMin,
                   max: _kSecondsMax,
@@ -352,6 +354,7 @@ class _GroupPanel extends StatelessWidget {
                 ),
               ),
               _ValuePill(
+                label: 'Delta',
                 items: numericWheelItems(
                   min: _kDeltaMin,
                   max: _kDeltaMax,
@@ -545,6 +548,7 @@ class _ValuePill extends StatefulWidget {
     required this.color,
     required this.onChanged,
     this.onLongPress,
+    this.label,
   });
 
   final List<String> items;
@@ -552,6 +556,10 @@ class _ValuePill extends StatefulWidget {
   final Color color;
   final ValueChanged<int> onChanged;
   final VoidCallback? onLongPress;
+
+  /// Klein bijschrift boven de pill (bv. "Work"), zodat de drie
+  /// tijd-pills (werk/rust/delta) niet te verwarren zijn.
+  final String? label;
 
   @override
   State<_ValuePill> createState() => _ValuePillState();
@@ -608,7 +616,7 @@ class _ValuePillState extends State<_ValuePill> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    final pill = Material(
       color: widget.color.withValues(alpha: 0.12),
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -658,6 +666,22 @@ class _ValuePillState extends State<_ValuePill> {
           ),
         ),
       ),
+    );
+
+    final label = widget.label;
+    if (label == null) return pill;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: widget.color),
+        ),
+        const SizedBox(height: 2),
+        pill,
+      ],
     );
   }
 }

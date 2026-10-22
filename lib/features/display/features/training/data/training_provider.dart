@@ -6,8 +6,7 @@ import 'package:hs_coaching_core/training/training.dart';
 import 'package:hs_coaching_core/training/training_flatten.dart';
 import 'package:hs_coaching_core/training/training_navigation.dart';
 import 'package:hs_coaching_core/training/training_status.dart';
-import 'package:hs_coaching_core/training/training_step.dart';
-import 'package:hs_coaching_core/training/training_step_phase.dart';
+import 'package:hs_coaching_core/training/training_session_progress.dart';
 import 'package:hs_coaching_app/features/display/features/training/data/training_repository.dart';
 import 'package:hs_coaching_app/features/display/features/training/domain/training_template.dart';
 
@@ -37,9 +36,7 @@ final trainingNotifierProvider =
     StreamNotifierProvider<TrainingNotifier, Training>(TrainingNotifier.new);
 
 /// Opgeslagen Set/Subset/Oefening-kaarten uit de club-bibliotheek.
-final trainingTemplatesProvider = StreamProvider<List<TrainingTemplate>>((
-  ref,
-) {
+final trainingTemplatesProvider = StreamProvider<List<TrainingTemplate>>((ref) {
   return ref.watch(trainingRepositoryProvider).watchTemplates();
 });
 
@@ -102,12 +99,9 @@ class TrainingCommands {
 
   // ------------------------------------------------------- Live-sessie
   // Naar het voorbeeld van [TabataCommands]: optimistische update + rollback
-  // via invalidate. Positie-navigatie (next/previous/moveToFirstStep) slaat
-  // eerst de training plat (`flattenTraining`) en vertaalt de huidige
-  // `currentPath`/`currentGroupIndex`/`currentPhase` naar een index daarin
-  // (`pointerFor`) — zie `training.dart`'s doc comment voor waarom Training,
-  // in tegenstelling tot Tabata, een expliciete pointer nodig heeft i.p.v.
-  // een puur uit verstreken tijd afgeleide positie.
+  // via invalidate. Next/previous rekenen eerst de actuele positie uit
+  // (`trainingProgressAt`: anker + verstreken tijd, zie `training.dart`'s doc
+  // comment) en verzetten dan het anker (`currentStepIndex`).
 
   int get _nowServerMillis {
     final offsetMillis = ref.read(serverTimeOffsetProvider).value ?? 0;
@@ -167,24 +161,18 @@ class TrainingCommands {
   /// naar de eerste stap van de platgeslagen tijdlijn.
   Future<void> moveToFirstStep(Training currentTraining) async {
     final steps = flattenTraining(currentTraining);
-    await _moveTo(currentTraining, steps.isEmpty ? null : steps.first);
+    await _moveTo(currentTraining, steps.isEmpty ? null : 0);
   }
 
   /// Eén stap vooruit — ook tijdens een getimede stap, om die vroegtijdig
-  /// af te breken. Wordt ook door `TrainingScreenController` aangeroepen
-  /// zodra een getimede stap vanzelf afloopt (auto-advance).
+  /// af te breken, en de enige manier om voorbij een ongetimede stap te
+  /// komen.
   Future<void> next(Training currentTraining) async {
-    final steps = flattenTraining(currentTraining);
-    final pointer = pointerFor(
-      steps,
-      path: currentTraining.currentPath,
-      groupIndex: currentTraining.currentGroupIndex,
-      phase: currentTraining.currentPhase,
-    );
-    final target = nextStepPointer(steps, pointer);
+    final progress = _progressNow(currentTraining);
+    final target = nextStepIndex(progress);
     await _moveTo(
       currentTraining,
-      target.index < steps.length ? steps[target.index] : null,
+      target < progress.totalSteps ? target : null,
     );
   }
 
@@ -192,17 +180,17 @@ class TrainingCommands {
   /// terugkomt (zie `training.dart`'s doc comment). Doet niets als er geen
   /// vorige stap is (sessie nog niet gestart).
   Future<void> previous(Training currentTraining) async {
-    final steps = flattenTraining(currentTraining);
-    final pointer = pointerFor(
-      steps,
-      path: currentTraining.currentPath,
-      groupIndex: currentTraining.currentGroupIndex,
-      phase: currentTraining.currentPhase,
+    final target = previousStepIndex(_progressNow(currentTraining));
+    if (target == null) return;
+    await _moveTo(currentTraining, target);
+  }
+
+  TrainingSessionProgress _progressNow(Training training) {
+    return trainingProgressAt(
+      training,
+      flattenTraining(training),
+      nowServerMillis: _nowServerMillis,
     );
-    if (pointer.isBeforeStart) return;
-    final target = previousStepPointer(steps, pointer);
-    if (target.index < 0 || target.index >= steps.length) return;
-    await _moveTo(currentTraining, steps[target.index]);
   }
 
   /// Zet de sessie terug naar niet-gestart; de boom blijft behouden.
@@ -215,9 +203,7 @@ class TrainingCommands {
         status: TrainingStatus.idle,
         authoritativeStartTimeMillis: 0,
         accumulatedElapsedMillis: 0,
-        currentPath: const [],
-        currentGroupIndex: 0,
-        currentPhase: TrainingStepPhase.work,
+        currentStepIndex: -1,
       ),
     );
 
@@ -229,12 +215,12 @@ class TrainingCommands {
     }
   }
 
-  Future<void> _moveTo(Training currentTraining, TrainingStep? step) async {
+  Future<void> _moveTo(Training currentTraining, int? stepIndex) async {
     final repository = ref.read(trainingRepositoryProvider);
     final notifier = ref.read(trainingNotifierProvider.notifier);
 
     final eventTime = _nowServerMillis;
-    if (step == null) {
+    if (stepIndex == null) {
       notifier.setOptimistic(
         currentTraining.copyWith(status: TrainingStatus.finished),
       );
@@ -247,9 +233,7 @@ class TrainingCommands {
           status: resumedStatus,
           authoritativeStartTimeMillis: eventTime,
           accumulatedElapsedMillis: 0,
-          currentPath: step.path,
-          currentGroupIndex: step.groupIndex,
-          currentPhase: step.phase,
+          currentStepIndex: stepIndex,
         ),
       );
     }
@@ -257,7 +241,7 @@ class TrainingCommands {
     try {
       await repository.moveTo(
         currentTraining,
-        step,
+        stepIndex,
         nowServerMillis: eventTime,
       );
     } catch (e) {

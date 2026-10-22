@@ -2,8 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hs_coaching_core/training/display_training_repository.dart';
 import 'package:hs_coaching_core/training/training.dart';
 import 'package:hs_coaching_core/training/training_status.dart';
-import 'package:hs_coaching_core/training/training_step.dart';
-import 'package:hs_coaching_core/training/training_step_phase.dart';
 import 'package:hs_coaching_core/training/training_validation.dart';
 import 'package:hs_coaching_app/features/display/features/training/domain/training_template.dart';
 
@@ -83,12 +81,12 @@ class TrainingRepository extends DisplayTrainingRepository {
     });
   }
 
-  /// Verplaatst de sessie-pointer naar [step] en herstart de klok voor die
-  /// stap (`accumulatedElapsedMillis` terug naar 0, altijd — zie
-  /// `training.dart`'s doc comment: previous herstart de klok, en dezelfde
-  /// methode bedient next/previous/auto-advance, dus dat geldt overal).
-  /// [step] is `null` zodra de pointer voorbij de laatste stap beweegt
-  /// (einde van de sessie): dan wordt alleen `status: finished` geschreven.
+  /// Verzet het anker (`Training.currentStepIndex`) naar [stepIndex] en
+  /// herstart de klok vanaf daar (`accumulatedElapsedMillis` terug naar 0,
+  /// altijd — zie `training.dart`'s doc comment: previous herstart de klok,
+  /// en dezelfde methode bedient start/next/previous). [stepIndex] `null`
+  /// betekent voorbij de laatste stap (einde van de sessie): dan wordt
+  /// alleen `status: finished` geschreven.
   ///
   /// Blijft `paused` als de sessie al gepauzeerd was (de coach kan zo door
   /// de tijdlijn stappen zonder de klok per ongeluk te laten lopen); wordt
@@ -97,10 +95,10 @@ class TrainingRepository extends DisplayTrainingRepository {
   /// hervat de sessie actief.
   Future<void> moveTo(
     Training currentTraining,
-    TrainingStep? step, {
+    int? stepIndex, {
     required int nowServerMillis,
   }) async {
-    if (step == null) {
+    if (stepIndex == null) {
       await trainingSettingsRef.update({
         'status': TrainingStatus.finished.name,
       });
@@ -115,9 +113,7 @@ class TrainingRepository extends DisplayTrainingRepository {
       'status': resumedStatus.name,
       'authoritativeStartTimeMillis': nowServerMillis,
       'accumulatedElapsedMillis': 0,
-      'currentPath': step.path,
-      'currentGroupIndex': step.groupIndex,
-      'currentPhase': step.phase.name,
+      'currentStepIndex': stepIndex,
     });
   }
 
@@ -128,9 +124,7 @@ class TrainingRepository extends DisplayTrainingRepository {
       'status': TrainingStatus.idle.name,
       'authoritativeStartTimeMillis': 0,
       'accumulatedElapsedMillis': 0,
-      'currentPath': <int>[],
-      'currentGroupIndex': 0,
-      'currentPhase': TrainingStepPhase.work.name,
+      'currentStepIndex': -1,
     });
   }
 
@@ -147,21 +141,24 @@ class TrainingRepository extends DisplayTrainingRepository {
   }
 
   Stream<List<TrainingTemplate>> watchTemplates() {
-    return _templatesRef.orderBy('title').snapshots().map(
-      (snapshot) => snapshot.docs.map((doc) {
-        final data = doc.data();
-        return TrainingTemplate(
-          id: doc.id,
-          title: data['title'] as String? ?? '',
-          kind: TrainingTemplateKind.values.firstWhere(
-            (kind) => kind.name == data['kind'],
-            orElse: () => TrainingTemplateKind.exercise,
-          ),
-          payload: (data['payload'] as Map<String, dynamic>?) ?? const {},
-          height: (data['height'] as num?)?.toInt() ?? 1,
+    return _templatesRef
+        .orderBy('title')
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs.map((doc) {
+            final data = doc.data();
+            return TrainingTemplate(
+              id: doc.id,
+              title: data['title'] as String? ?? '',
+              kind: TrainingTemplateKind.values.firstWhere(
+                (kind) => kind.name == data['kind'],
+                orElse: () => TrainingTemplateKind.exercise,
+              ),
+              payload: (data['payload'] as Map<String, dynamic>?) ?? const {},
+              height: (data['height'] as num?)?.toInt() ?? 1,
+            );
+          }).toList(),
         );
-      }).toList(),
-    );
   }
 
   Future<void> saveTemplate(
