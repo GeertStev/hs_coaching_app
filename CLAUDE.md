@@ -49,8 +49,9 @@ users/{uid}                     # AppUser; profile pictures in Storage at user_p
   tree ops in `training/domain/training_tree.dart` (unit-tested in `test/`), max depth enforced via
   core's `training_validation.dart`; widgets only wire `LongPressDraggable`/`DragTarget`
   (`training_drag_drop.dart`) and call `training_mutations.dart`.
-- **Training session control**: `TrainingScreenController` calls `next()` when `autoAdvanceDue`.
-  The screen app mirrors it but never advances.
+- **Training session control**: `TrainingScreenController` only derives progress
+  (`trainingProgressAt`); timed steps advance by elapsed time on both devices. The app writes the
+  pointer (`currentStepIndex`) only on Start/Next/Previous/Reset.
 - Error messages for users are mapped to text in `auth/presentation/auth_error_messages.dart` and
   `club/presentation/my_clubs_screen.dart`'s `clubErrorMessage`.
 

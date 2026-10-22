@@ -150,10 +150,11 @@ class _ListTab extends ConsumerWidget {
                       trailing: IconButton(
                         icon: const Icon(Icons.delete_outline),
                         onPressed: () async {
-                          final confirmed = await showTrainingDeleteConfirmDialog(
-                            context,
-                            itemLabel: template.title,
-                          );
+                          final confirmed =
+                              await showTrainingDeleteConfirmDialog(
+                                context,
+                                itemLabel: template.title,
+                              );
                           if (confirmed == true) {
                             await commands.deleteTemplate(template.id);
                           }
@@ -179,6 +180,32 @@ class _LiveTab extends ConsumerWidget {
   const _LiveTab({required this.training});
   final Training training;
 
+  Future<void> _confirmReset(
+    BuildContext context,
+    TrainingCommands commands,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset session?'),
+        content: const Text(
+          'The session goes back to the start. The training itself is kept.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await commands.resetSession(training);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(trainingScreenControllerProvider);
@@ -191,17 +218,49 @@ class _LiveTab extends ConsumerWidget {
 
     final step = progress.currentStep;
 
-    if (step == null && !progress.isFinished) {
+    if (progress.isBeforeStart && !progress.isFinished) {
       return Center(
         child: ElevatedButton.icon(
           onPressed: training.children.isEmpty
               ? null
               : () => commands.moveToFirstStep(training),
           icon: const Icon(Icons.play_arrow),
-          label: const Text('Start sessie'),
+          label: const Text('Start session'),
         ),
       );
     }
+
+    ButtonStyle buttonStyle(Color background, Color foreground) =>
+        ElevatedButton.styleFrom(
+          backgroundColor: background,
+          foregroundColor: foreground,
+          disabledBackgroundColor: colorScheme.surfaceContainerHighest,
+          disabledForegroundColor: colorScheme.onSurfaceVariant,
+          minimumSize: const Size(0, 52),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(metrics.radiusDefault),
+          ),
+        );
+
+    Widget button(String label, VoidCallback? onPressed, ButtonStyle style) =>
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: metrics.spacingXs),
+            child: ElevatedButton(
+              onPressed: onPressed,
+              style: style,
+              child: Text(
+                label,
+                style: buttonLabelStyle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        );
+
+    final isRunning = training.status == TrainingStatus.running;
 
     return Padding(
       padding: EdgeInsets.all(metrics.spacingMd),
@@ -220,7 +279,7 @@ class _LiveTab extends ConsumerWidget {
                         ),
                         SizedBox(height: metrics.spacingMd),
                         Text(
-                          'Training voltooid',
+                          'Training finished',
                           style: Theme.of(context).textTheme.headlineSmall,
                         ),
                       ],
@@ -229,95 +288,52 @@ class _LiveTab extends ConsumerWidget {
                 : _StepView(step: step!, progress: progress),
           ),
           SizedBox(height: metrics.spacingLg),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 100,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () => commands.previous(training),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.tertiaryContainer,
-                    foregroundColor: colorScheme.onTertiaryContainer,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        metrics.radiusDefault,
-                      ),
-                    ),
+          // Rechts ruimte laten voor de "cast naar scherm"-knop van
+          // `ContentControlScreen`, die anders over de laatste knop valt.
+          Padding(
+            padding: const EdgeInsets.only(right: 72),
+            child: Row(
+              children: [
+                button(
+                  'Previous',
+                  () => commands.previous(training),
+                  buttonStyle(
+                    colorScheme.tertiaryContainer,
+                    colorScheme.onTertiaryContainer,
                   ),
-                  child: Text('Vorige', style: buttonLabelStyle),
                 ),
-              ),
-              SizedBox(width: metrics.spacingMd),
-              SizedBox(
-                width: 150,
-                height: 54,
-                child: progress.isFinished
-                    ? ElevatedButton(
-                        onPressed: () => commands.resetSession(training),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.tertiary,
-                          foregroundColor: colorScheme.onTertiary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              metrics.radiusDefault,
-                            ),
-                          ),
-                        ),
-                        child: Text('Reset', style: buttonLabelStyle),
-                      )
-                    : training.status == TrainingStatus.running
-                    ? ElevatedButton(
-                        onPressed: () => commands.pause(training),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.secondary,
-                          foregroundColor: colorScheme.onSecondary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              metrics.radiusDefault,
-                            ),
-                          ),
-                        ),
-                        child: Text('Pause', style: buttonLabelStyle),
-                      )
-                    : ElevatedButton(
-                        onPressed: () => commands.start(training),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              metrics.radiusDefault,
-                            ),
-                          ),
-                        ),
-                        child: Text('Hervat', style: buttonLabelStyle),
-                      ),
-              ),
-              SizedBox(width: metrics.spacingMd),
-              SizedBox(
-                width: 100,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: progress.isFinished
+                button(
+                  isRunning ? 'Pause' : 'Resume',
+                  progress.isFinished
                       ? null
-                      : () => commands.next(training),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.primaryContainer,
-                    foregroundColor: colorScheme.onPrimaryContainer,
-                    disabledBackgroundColor: colorScheme.surfaceContainerHighest,
-                    disabledForegroundColor: colorScheme.onSurfaceVariant,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        metrics.radiusDefault,
-                      ),
-                    ),
-                  ),
-                  child: Text('Volgende', style: buttonLabelStyle),
+                      : isRunning
+                      ? () => commands.pause(training)
+                      : () => commands.start(training),
+                  isRunning
+                      ? buttonStyle(
+                          colorScheme.secondary,
+                          colorScheme.onSecondary,
+                        )
+                      : buttonStyle(colorScheme.primary, colorScheme.onPrimary),
                 ),
-              ),
-            ],
+                button(
+                  'Next',
+                  progress.isFinished ? null : () => commands.next(training),
+                  buttonStyle(
+                    colorScheme.primaryContainer,
+                    colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                button(
+                  'Reset',
+                  () => _confirmReset(context, commands),
+                  buttonStyle(
+                    colorScheme.errorContainer,
+                    colorScheme.onErrorContainer,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -325,18 +341,19 @@ class _LiveTab extends ConsumerWidget {
   }
 }
 
-/// Toont de huidige stap: herhalings-context ("Set 2/3"), stapteller,
-/// oefening + timing-rij-naam, werk/rust-label, aftellende tijd (of "Wacht
-/// op coach" als de stap ongetimed is — zie `training.dart`'s doc comment),
-/// en de parameter-rijen (reps/afstand/slag/intensiteit/zone).
+/// Toont de huidige stap: herhalings-context ("Set 2/14"), de oefening
+/// binnen de set ("Step 1/4"), oefening + timing-rij-naam, werk/rust-label,
+/// aftellende tijd (of "Waiting for coach" als de stap ongetimed is — zie
+/// `training.dart`'s doc comment), en de parameter-rijen
+/// (reps/afstand/slag/intensiteit/zone).
 class _StepView extends StatelessWidget {
   const _StepView({required this.step, required this.progress});
   final TrainingStep step;
   final TrainingSessionProgress progress;
 
-  String _formatRemaining(Duration d) {
-    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+  String _formatSeconds(int totalSeconds) {
+    final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
+    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
   }
 
@@ -357,6 +374,7 @@ class _StepView extends StatelessWidget {
     final phaseColor = step.phase == TrainingStepPhase.rest
         ? colorScheme.tertiary
         : colorScheme.primary;
+    final remainingSeconds = progress.remainingSeconds;
 
     return Center(
       child: Column(
@@ -364,12 +382,12 @@ class _StepView extends StatelessWidget {
         children: [
           for (final repeat in step.repeats)
             Text(
-              '${repeat.groupTitle ?? "Herhaling"}: ${repeat.iteration}/${repeat.repeatCount}',
+              '${repeat.groupTitle ?? "Set"} ${repeat.iteration}/${repeat.repeatCount}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           const SizedBox(height: 8),
           Text(
-            'Stap ${progress.stepIndex + 1}/${progress.totalSteps}',
+            'Step ${step.siblingIndex + 1}/${step.siblingCount}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
@@ -379,22 +397,25 @@ class _StepView extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           if (step.groupName.isNotEmpty)
-            Text(
-              step.groupName,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            Text(step.groupName, style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 8),
           Text(
-            step.phase == TrainingStepPhase.rest ? 'Rust' : 'Werk',
+            progress.status == TrainingStatus.paused
+                ? 'Paused'
+                : step.phase == TrainingStepPhase.rest
+                ? 'Rest'
+                : 'Work',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: phaseColor,
+              color: progress.status == TrainingStatus.paused
+                  ? colorScheme.outline
+                  : phaseColor,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
-          if (progress.remaining != null)
+          if (remainingSeconds != null)
             Text(
-              _formatRemaining(progress.remaining!),
+              _formatSeconds(remainingSeconds),
               style: Theme.of(context).textTheme.displayLarge?.copyWith(
                 fontFamily: 'monospace',
                 fontWeight: FontWeight.bold,
@@ -403,7 +424,7 @@ class _StepView extends StatelessWidget {
             )
           else
             Text(
-              'Wacht op coach',
+              'Waiting for coach',
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(color: colorScheme.outline),
