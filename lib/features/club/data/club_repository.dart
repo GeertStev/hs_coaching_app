@@ -6,10 +6,12 @@ import 'package:hs_coaching_app/features/club/domain/club.dart';
 import 'package:hs_coaching_app/features/club/domain/club_invite.dart';
 import 'package:hs_coaching_app/features/club/domain/club_membership.dart';
 import 'package:hs_coaching_app/features/club/domain/club_team.dart';
+import 'package:hs_coaching_core/core/errors/user_message.dart';
 
 /// Fout met een gebruikersvriendelijke (Nederlandse) melding uit de club-flow.
-class ClubException implements Exception {
+class ClubException implements UserFacingException {
   ClubException(this.message);
+  @override
   final String message;
 
   @override
@@ -158,8 +160,8 @@ class ClubRepository {
       final existing = _membershipFromDoc(doc);
       throw ClubException(
         existing.isPending
-            ? 'Je hebt al een aanvraag lopen bij deze club.'
-            : 'Je bent al lid van deze club.',
+            ? 'You already have a pending request for this club.'
+            : 'You are already a member of this club.',
       );
     }
     await _members(clubId)
@@ -181,29 +183,29 @@ class ClubRepository {
     required AppUser user,
   }) async {
     final normalized = code.trim().toUpperCase();
-    if (normalized.isEmpty) throw ClubException('Vul een code in.');
+    if (normalized.isEmpty) throw ClubException('Enter a code.');
 
     final doc = await _inviteCode(normalized).get();
     final data = doc.data();
     if (!doc.exists || data == null) {
-      throw ClubException('Deze uitnodigingscode bestaat niet.');
+      throw ClubException('This invite code does not exist.');
     }
     if (data['active'] != true) {
-      throw ClubException('Deze uitnodigingscode is niet meer geldig.');
+      throw ClubException('This invite code is no longer valid.');
     }
     final expiresAt = data['expiresAt'];
     if (expiresAt is Timestamp &&
         DateTime.now().isAfter(expiresAt.toDate())) {
-      throw ClubException('Deze uitnodigingscode is verlopen.');
+      throw ClubException('This invite code has expired.');
     }
     final clubId = data['clubId'] as String?;
     if (clubId == null) {
-      throw ClubException('Deze uitnodigingscode is ongeldig.');
+      throw ClubException('This invite code is invalid.');
     }
 
     final memberDoc = await _members(clubId).doc(user.uid).get();
     if (memberDoc.exists && _membershipFromDoc(memberDoc).isActive) {
-      throw ClubException('Je bent al lid van deze club.');
+      throw ClubException('You are already a member of this club.');
     }
 
     final role = ClubRole.values.firstWhere(

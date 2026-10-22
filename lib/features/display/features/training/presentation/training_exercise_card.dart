@@ -203,8 +203,8 @@ class TrainingExerciseCard extends ConsumerWidget {
       canAccept: (payload) => canGroupWithTarget(ref, payload.path, path),
       onAccept: (payload) => _handleMergeAccept(ref, context, payload),
       rejectionMessage: (_) =>
-          'Deze oefening kan hiermee niet groeperen (max-diepte-3 zou '
-          'overschreden worden).',
+          'This exercise cannot be grouped with this (it would exceed the '
+          'maximum depth of 3).',
       child: draggable,
     );
 

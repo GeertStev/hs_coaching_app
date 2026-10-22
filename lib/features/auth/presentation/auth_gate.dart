@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/features/auth/data/auth_providers.dart';
 import 'package:hs_coaching_app/features/auth/presentation/login_screen.dart';
 import 'package:hs_coaching_app/features/home/presentation/home_screen.dart';
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
 class AuthGate extends ConsumerWidget {
   const AuthGate({super.key});
@@ -20,7 +21,12 @@ class AuthGate extends ConsumerWidget {
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, stack) => Scaffold(body: Center(child: Text('Error: $err'))),
+      error: (err, stack) => Scaffold(
+        body: ErrorView(
+          error: err,
+          onRetry: () => ref.invalidate(authStateChangesProvider),
+        ),
+      ),
     );
   }
 }

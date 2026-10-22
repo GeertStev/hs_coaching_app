@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
-import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/display/application/search_service.dart';
 import 'package:hs_coaching_app/features/display/features/tag_and_search/data/tag_maintenance.dart';
 import 'package:hs_coaching_app/features/display/features/tag_and_search/domain/tag_ops.dart';
 import 'package:hs_coaching_app/features/display/features/tag_and_search/presentation/search_and_tag_bar.dart';
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
 typedef ItemBuilder<T> = Widget Function(BuildContext context, T item);
 typedef FilterPredicate<T> = bool Function(T item, String query);
@@ -101,17 +101,9 @@ class ContentList<T> extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(
-              child: Padding(
-                padding: EdgeInsets.all(metrics.spacingMd),
-                child: Text(
-                  'Error loading items: $error',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: colorScheme.error),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+            error: (error, stack) => ErrorView(
+              error: error,
+              onRetry: () => ref.invalidate(itemsProvider(selectedTag)),
             ),
           ),
         ),

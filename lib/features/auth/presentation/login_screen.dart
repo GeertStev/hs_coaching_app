@@ -28,7 +28,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!ok && mounted) {
       final error = ref.read(authControllerProvider).error;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authErrorMessage(error ?? ''))),
+        SnackBar(content: Text(authErrorMessage(error))),
       );
     }
     // Navigatie bij succes wordt door de AuthGate afgehandeld.
@@ -67,7 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (email == null || !mounted) return;
     if (AuthValidators.email(email) != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dit is geen geldig e-mailadres.')),
+        const SnackBar(content: Text('This is not a valid email address.')),
       );
       return;
     }
@@ -81,7 +81,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         content: Text(
           ok
               ? 'Reset-e-mail verstuurd naar $email.'
-              : authErrorMessage(error ?? ''),
+              : authErrorMessage(error),
         ),
       ),
     );

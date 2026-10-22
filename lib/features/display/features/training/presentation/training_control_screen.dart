@@ -16,6 +16,7 @@ import 'package:hs_coaching_app/features/display/features/training/domain/traini
 import 'package:hs_coaching_app/features/display/features/training/presentation/training_children_editor.dart';
 import 'package:hs_coaching_app/features/display/features/training/presentation/training_dialogs.dart';
 import 'package:hs_coaching_app/features/display/features/training/presentation/training_screen_controller.dart';
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
 /// `ContentControlScreen`-wrapper zoals Sketch/Image/Tabata/etc. — Training
 /// heeft sinds de live-sessietab hieronder (`_LiveTab`) een echte
@@ -32,8 +33,10 @@ class TrainingControlScreen extends ConsumerWidget {
       body: trainingAsync.when(
         data: (training) => _TrainingConfigView(training: training),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) =>
-            Center(child: Text('Error loading Training: $err')),
+        error: (err, stack) => ErrorView(
+          error: err,
+          onRetry: () => ref.invalidate(trainingNotifierProvider),
+        ),
       ),
     );
   }
@@ -213,7 +216,10 @@ class _ListTab extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Fout bij laden: $err')),
+      error: (err, stack) => ErrorView(
+        error: err,
+        onRetry: () => ref.invalidate(trainingTemplatesProvider),
+      ),
     );
   }
 }

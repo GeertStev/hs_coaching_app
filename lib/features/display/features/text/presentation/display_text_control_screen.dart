@@ -8,6 +8,7 @@ import 'package:hs_coaching_app/features/display/features/text/data/display_text
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog_parts.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_sheet.dart';
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
 class TextControlScreen extends ConsumerStatefulWidget {
   const TextControlScreen({super.key});
@@ -69,13 +70,7 @@ class _TextControlScreenState extends ConsumerState<TextControlScreen> {
   @override
   Widget build(BuildContext context) {
     // Luister naar foutmeldingen van de controller
-    ref.listen<AsyncValue<void>>(textControllerProvider, (_, state) {
-      if (state.hasError && !state.isLoading) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(state.error.toString())));
-      }
-    });
+    listenForMutationErrors(ref, context, textControllerProvider);
 
     return ContentControlScreen(
       body: const TextList(),

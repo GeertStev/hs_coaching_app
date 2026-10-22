@@ -12,7 +12,7 @@ Extra stack on top of core: `firebase_auth`, `firebase_messaging`, `perfect_free
 
 ## Layout
 `lib/features/<feature>/{data,domain,presentation}`, cross-cutting code in `lib/core/`
-(`providers/riverpod_config.dart`, `theme/`). The content types live under
+(`presentation/error_display.dart`, `theme/`). The content types live under
 `lib/features/display/features/<type>/`; `display/presentation/` holds the shared content
 list/card/edit-dialog scaffolding.
 
@@ -52,12 +52,16 @@ users/{uid}                     # AppUser; profile pictures in Storage at user_p
 - **Training session control**: `TrainingScreenController` only derives progress
   (`trainingProgressAt`); timed steps advance by elapsed time on both devices. The app writes the
   pointer (`currentStepIndex`) only on Start/Next/Previous/Reset.
-- Error messages for users are mapped to text in `auth/presentation/auth_error_messages.dart` and
-  `club/presentation/my_clubs_screen.dart`'s `clubErrorMessage`.
+- **Errors** (see core's `CLAUDE.md`): `core/presentation/error_display.dart` has `ErrorView`
+  (for `.when(error: ...)`, with a retry that invalidates the provider), `showErrorSnackBar`, and
+  `listenForMutationErrors` for `AsyncNotifier<void>` controllers. A fire-and-forget `Future` that
+  fails (e.g. a Start button) still shows a SnackBar via `installGlobalErrorHandlers` in `main.dart`.
+  Feature-specific texts: `authErrorMessage` (`auth/presentation/auth_error_messages.dart`) and
+  `clubErrorMessage` (`club/presentation/my_clubs_screen.dart`), both falling back to `userMessage`.
 
 ## Gotchas
 - **Riverpod auto-retry:** a failing stream provider (e.g. missing index → `failed-precondition`)
   is retried by default and Firestore re-emits cache in between, so the UI flickers and the real
   error never shows. Handled globally by `appProviderRetry` + `AppProviderObserver`
-  (`core/providers/riverpod_config.dart`, registered in `main.dart`). Keep them on the `ProviderScope`.
+  (core's `core/providers/riverpod_config.dart`, registered in `main.dart`). Keep them on the `ProviderScope`.
 - Open work is tracked as GitHub issues, not in code comments or this file.

@@ -113,7 +113,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
       final error = ref.read(profileControllerProvider).error;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(authErrorMessage(error ?? ''))));
+      ).showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
     }
   }
 
@@ -320,7 +320,7 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
               controller: _firstName,
               decoration: const InputDecoration(labelText: 'Voornaam'),
               validator: (v) =>
-                  AuthValidators.requiredField(v, label: 'een voornaam'),
+                  AuthValidators.requiredField(v, label: 'a first name'),
               textCapitalization: TextCapitalization.words,
             ),
             SizedBox(height: metrics.spacingMd),
@@ -328,7 +328,7 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
               controller: _lastName,
               decoration: const InputDecoration(labelText: 'Achternaam'),
               validator: (v) =>
-                  AuthValidators.requiredField(v, label: 'een achternaam'),
+                  AuthValidators.requiredField(v, label: 'a last name'),
               textCapitalization: TextCapitalization.words,
             ),
             SizedBox(height: metrics.spacingMd),
@@ -336,7 +336,7 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
               controller: _phone,
               decoration: const InputDecoration(labelText: 'Telefoonnummer'),
               validator: (v) =>
-                  AuthValidators.requiredField(v, label: 'een telefoonnummer'),
+                  AuthValidators.requiredField(v, label: 'a phone number'),
               keyboardType: TextInputType.phone,
             ),
           ],

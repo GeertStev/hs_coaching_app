@@ -4,20 +4,15 @@ import 'package:hs_coaching_app/features/display/features/team/presentation/disp
 import 'package:hs_coaching_app/features/display/features/team/presentation/team_preview_dialog.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_control_screen.dart';
 import 'package:hs_coaching_app/features/display/domain/display_content_settings.dart';
+import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
 class TeamControlScreen extends ConsumerWidget {
   const TeamControlScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Luister naar de controller voor eventuele fouten tijdens Firebase mutaties
-    ref.listen<AsyncValue<void>>(teamControllerProvider, (_, state) {
-      if (state.hasError && !state.isLoading) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fout bij het updaten: ${state.error}')),
-        );
-      }
-    });
+    // Toon een melding als een update naar Firebase mislukt
+    listenForMutationErrors(ref, context, teamControllerProvider);
 
     return ContentControlScreen(
       contentType: DisplayContentType.team,
