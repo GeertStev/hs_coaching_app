@@ -12,12 +12,7 @@ final allActiveTextsProvider =
     });
 
 final currentTextIdProvider = StreamProvider<String?>((ref) {
-  return ref.watch(displayTextRepositoryProvider).watchCurrentTextIdDoc().map((
-    snapshot,
-  ) {
-    final data = snapshot.data() as Map<String, dynamic>?;
-    return data?['currentId'] as String?;
-  });
+  return ref.watch(displayTextRepositoryProvider).watchCurrentTextId();
 });
 
 final currentTextProvider = StreamProvider<DisplayText?>((ref) {

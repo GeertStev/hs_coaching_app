@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/i_sketch_repository.dart';
 import 'package:hs_coaching_core/sketch/sketch.dart';
 import 'package:hs_coaching_core/sketch/sketch_background.dart';
 import 'package:hs_coaching_core/sketch/sketch_element.dart';
@@ -9,8 +8,7 @@ import 'package:hs_coaching_core/sketch/sketch_repository.dart';
 
 /// Adds create/update/archive/background/tag-mutating writes on top of core's
 /// read-only [DisplaySketchRepositoryBase].
-class DisplaySketchRepository extends DisplaySketchRepositoryBase
-    implements ISketchRepository {
+class DisplaySketchRepository extends DisplaySketchRepositoryBase {
   DisplaySketchRepository({
     required super.firestore,
     required FirebaseStorage storage,
@@ -20,12 +18,12 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase
 
   final FirebaseStorage _storage;
 
-  @override
+  /// Streamed de realtime elementen van een specifieke sketch.
   Stream<List<SketchElement>> getSketchElements(String sketchId) {
     return watchSketchElements(sketchId);
   }
 
-  @override
+  /// Voegt een element toe of werkt een bestaand element bij.
   Future<void> addOrUpdateElement(
     String sketchId,
     SketchElement element,
@@ -33,12 +31,12 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase
     await elementsRef(sketchId).doc(element.id).set(element);
   }
 
-  @override
+  /// Verwijdert een specifiek element uit een sketch.
   Future<void> removeElement(String sketchId, String elementId) async {
     await elementsRef(sketchId).doc(elementId).delete();
   }
 
-  @override
+  /// Verwijdert alle elementen van een sketch.
   Future<void> clearSketch(String sketchId) async {
     final snapshot = await elementsRef(sketchId).get();
     for (final doc in snapshot.docs) {
@@ -46,7 +44,7 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase
     }
   }
 
-  @override
+  /// Streamed de lijst met alle actieve sketches, optioneel gefilterd op tag.
   Stream<List<Sketch>> watchAllActiveSketches({String? tag}) {
     Query<Sketch> query = sketchesRef.where(
       'status',
@@ -63,6 +61,7 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
+  /// Streamed de metadata van één specifieke sketch op basis van zijn ID.
   @override
   Stream<Sketch> watchSketch(String sketchId) {
     return sketchesRef
@@ -71,7 +70,7 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase
         .map((snapshot) => snapshot.data()!);
   }
 
-  @override
+  /// Maakt een nieuwe sketch aan en retourneert het gegenereerde ID.
   Future<String> createSketch({
     required String title,
     required String userId,
@@ -106,7 +105,7 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase
     return newSketchDocRef.id;
   }
 
-  @override
+  /// Werkt de metadata van een bestaande sketch bij.
   Future<void> updateSketch({
     required String id,
     required String title,
@@ -134,7 +133,7 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase
     await batch.commit();
   }
 
-  @override
+  /// Archiveert een sketch.
   Future<void> archiveSketch(String sketchId) async {
     await sketchesRef.doc(sketchId).update({
       'status': SketchStatus.archived.name,
@@ -148,14 +147,14 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase
     }
   }
 
-  @override
+  /// Haalt een sketch uit het archief.
   Future<void> unarchiveSketch(String sketchId) async {
     await sketchesRef.doc(sketchId).update({
       'status': SketchStatus.active.name,
     });
   }
 
-  @override
+  /// Verwijdert een sketch permanent inclusief alle subcollecties.
   Future<void> hardDeleteSketch(String sketchId) async {
     final elementsQuery = elementsRef(sketchId);
     final elementsSnapshot = await elementsQuery.get();
@@ -169,34 +168,26 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase
     await sketchesRef.doc(sketchId).delete();
   }
 
-  @override
+  /// Werkt de `lastModified` timestamp van de sketch bij.
   Future<void> updateSketchTimestamp(String sketchId) {
     return sketchesRef.doc(sketchId).update({
       'lastModified': FieldValue.serverTimestamp(),
     });
   }
 
-  @override
-  Stream<String?> watchCurrentSketchId() {
-    return currentSketchSettingsRef.snapshots().map((snapshot) {
-      final data = snapshot.data() as Map<String, dynamic>?;
-      return data?['currentId'] as String?;
-    });
-  }
-
-  @override
+  /// Zet het ID van de momenteel actieve sketch.
   Future<void> setCurrentSketchId(String? sketchId) async {
     await currentSketchSettingsRef.set({
       'currentId': sketchId,
     }, SetOptions(merge: true));
   }
 
-  @override
+  /// Wist de huidige actieve sketch-koppeling.
   Future<void> clearCurrentSketch() async {
     await setCurrentSketchId(null);
   }
 
-  @override
+  /// Voegt een nieuwe achtergrondafbeelding toe.
   Future<void> addSketchBackground({
     required File imageFile,
     required String title,
@@ -217,7 +208,7 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase
     }, SetOptions(merge: true));
   }
 
-  @override
+  /// Wijzigt direct de achtergrond-URL van een specifieke sketch.
   Future<void> updateSketchBackground(String id, String? backgroundUrl) async {
     await sketchesRef.doc(id).update({
       // Als backgroundUrl null is, schrijf dit expliciet als null weg in Firestore
@@ -226,7 +217,7 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase
     });
   }
 
-  @override
+  /// Streamed alle unieke gebruikte sketch-tags.
   Stream<List<String>> watchAllSketchTags() {
     return currentSketchSettingsRef.snapshots().map((snapshot) {
       final data = snapshot.data() as Map<String, dynamic>?;
@@ -234,7 +225,7 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase
     });
   }
 
-  @override
+  /// Streamed alle beschikbare achtergronden.
   Stream<List<SketchBackground>> watchSketchBackgrounds() {
     return currentSketchSettingsRef.snapshots().map((snapshot) {
       final data = snapshot.data() as Map<String, dynamic>?;

@@ -12,12 +12,7 @@ final allActiveImagesProvider =
     });
 
 final currentImageIdProvider = StreamProvider<String?>((ref) {
-  return ref.watch(displayImageRepositoryProvider).watchCurrentImageIdDoc().map(
-    (snapshot) {
-      final data = snapshot.data() as Map<String, dynamic>?;
-      return data?['currentId'] as String?;
-    },
-  );
+  return ref.watch(displayImageRepositoryProvider).watchCurrentImageId();
 });
 
 final currentImageProvider = StreamProvider<DisplayImage?>((ref) {

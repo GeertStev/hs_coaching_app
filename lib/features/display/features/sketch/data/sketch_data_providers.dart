@@ -1,14 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_core/core/providers/display_device_ids_provider.dart';
-import 'package:hs_coaching_app/features/display/features/sketch/domain/i_sketch_repository.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_repository.dart';
 import 'package:hs_coaching_core/sketch/sketch.dart';
 import 'package:hs_coaching_core/sketch/sketch_background.dart';
 import 'package:hs_coaching_core/sketch/sketch_element.dart';
 
-/// Biedt toegang tot de ISketchRepository interface met de juiste club- en display-IDs.
-final sketchRepositoryProvider = Provider<ISketchRepository>((ref) {
+/// Biedt toegang tot de DisplaySketchRepository met de juiste club- en display-IDs.
+final sketchRepositoryProvider = Provider<DisplaySketchRepository>((ref) {
   final firestore = ref.watch(firebaseFirestoreProvider);
   final storage = ref.watch(firebaseStorageProvider);
   final ids = ref.watch(displayDeviceIdsProvider);
