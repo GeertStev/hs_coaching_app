@@ -18,6 +18,7 @@ class TrainingTemplate {
     required this.kind,
     required this.payload,
     required this.height,
+    this.tags = const [],
   });
 
   final String id;
@@ -33,6 +34,9 @@ class TrainingTemplate {
   /// filteren op `parentLevel + height <= 3` zonder elke kandidaat eerst te
   /// moeten deserialiseren (zie `training-model-v2-unified-group.md` §7).
   final int height;
+
+  /// Vrije tags om de bibliotheek te filteren (bv. "Warm-up", "Apnea").
+  final List<String> tags;
 
   /// Deserialiseert [payload] naar het modeltype dat bij [kind] hoort, en
   /// wikkelt het in een [TrainingNode] zodat het direct in de boom

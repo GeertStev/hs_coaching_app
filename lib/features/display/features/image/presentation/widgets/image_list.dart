@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/features/display/features/image/data/display_image_repository.dart';
 import 'package:hs_coaching_app/features/display/features/image/data/display_image_providers.dart';
 import 'package:hs_coaching_app/features/display/features/image/presentation/image_controller.dart';
 import 'package:hs_coaching_core/image/display_image.dart';
@@ -18,7 +19,7 @@ class ImageList extends ConsumerWidget {
     WidgetRef ref,
     DisplayImage imageItem,
   ) async {
-    final allTags = ref.read(allImageTagsProvider).value ?? [];
+    final allTags = ref.read(imageTagCountsProvider).keys.toList();
 
     final result = await showModalBottomSheet<ContentEditDialogResult>(
       context: context,
@@ -49,12 +50,14 @@ class ImageList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ContentList<DisplayImage>(
-      itemsProvider: allActiveImagesProvider.call,
+      itemsProvider: allActiveImagesProvider,
       searchQueryProvider: searchQueryProvider,
       itemTypeSingular: 'image',
       itemTypePlural: 'images',
-      allTagsProvider: allImageTagsProvider,
-      selectedTagProvider: selectedTagProvider,
+      tagCountsProvider: imageTagCountsProvider,
+      selectedTagsProvider: selectedTagsProvider,
+      tagMaintenanceProvider: displayImageRepositoryProvider,
+      tagsOf: (image) => image.tags,
       filterPredicate: (image, query) {
         final titleMatch = image.title?.toLowerCase().contains(query) ?? false;
         final descMatch =

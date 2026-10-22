@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:hs_coaching_app/features/display/features/tag_and_search/data/tag_maintenance.dart';
 import 'package:hs_coaching_core/sketch/sketch.dart';
 import 'package:hs_coaching_core/sketch/sketch_background.dart';
 import 'package:hs_coaching_core/sketch/sketch_element.dart';
@@ -8,7 +9,8 @@ import 'package:hs_coaching_core/sketch/sketch_repository.dart';
 
 /// Adds create/update/archive/background/tag-mutating writes on top of core's
 /// read-only [DisplaySketchRepositoryBase].
-class DisplaySketchRepository extends DisplaySketchRepositoryBase {
+class DisplaySketchRepository extends DisplaySketchRepositoryBase
+    implements TagMaintenance {
   DisplaySketchRepository({
     required super.firestore,
     required FirebaseStorage storage,
@@ -43,18 +45,11 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase {
     await _deleteInBatches(snapshot.docs.map((doc) => doc.reference));
   }
 
-  /// Streamed de lijst met alle actieve sketches, optioneel gefilterd op tag.
-  Stream<List<Sketch>> watchAllActiveSketches({String? tag}) {
-    Query<Sketch> query = sketchesRef.where(
-      'status',
-      isEqualTo: SketchStatus.active.name,
-    );
-
-    if (tag != null) {
-      query = query.where('tags', arrayContains: tag);
-    }
-
-    return query
+  /// Streamed de lijst met alle actieve sketches; tag-filters worden lokaal
+  /// toegepast (zie `ContentList`).
+  Stream<List<Sketch>> watchAllActiveSketches() {
+    return sketchesRef
+        .where('status', isEqualTo: SketchStatus.active.name)
         .orderBy('lastModified', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
@@ -229,17 +224,23 @@ class DisplaySketchRepository extends DisplaySketchRepositoryBase {
     });
   }
 
-  /// Streamed alle unieke gebruikte sketch-tags.
-  Stream<List<String>> watchAllSketchTags() {
-    return sketchSettingsRef
-        .snapshots()
-        .map((snapshot) => snapshot.data()?.sketchTags ?? const []);
-  }
-
   /// Streamed alle beschikbare achtergronden.
   Stream<List<SketchBackground>> watchSketchBackgrounds() {
     return sketchSettingsRef
         .snapshots()
         .map((snapshot) => snapshot.data()?.backgrounds ?? const []);
   }
+
+  @override
+  Future<void> renameTag(String from, String to) => renameTagInCollection(
+    firestore: firestore,
+    collectionPath: sketchesRef.path,
+    from: from,
+    to: to,
+    tagListDoc: currentSketchSettingsRef,
+    tagListField: 'sketchTags',
+  );
+
+  @override
+  Future<void> deleteTag(String tag) => renameTag(tag, '');
 }

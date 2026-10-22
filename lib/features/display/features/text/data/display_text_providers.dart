@@ -1,15 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:hs_coaching_app/features/display/application/search_service.dart';
+import 'package:hs_coaching_app/features/display/features/tag_and_search/domain/tag_ops.dart';
 import 'package:hs_coaching_app/features/display/features/text/data/display_text_repository.dart';
 import 'package:hs_coaching_core/text/display_text.dart';
 
-final allActiveTextsProvider =
-    StreamProvider.family<List<DisplayText>, String?>((ref, tag) {
-      return ref
-          .watch(displayTextRepositoryProvider)
-          .watchAllActiveTexts(tag: tag);
-    });
+final allActiveTextsProvider = StreamProvider<List<DisplayText>>((ref) {
+  return ref.watch(displayTextRepositoryProvider).watchAllActiveTexts();
+});
 
 final currentTextIdProvider = StreamProvider<String?>((ref) {
   return ref.watch(displayTextRepositoryProvider).watchCurrentTextId();
@@ -19,28 +17,17 @@ final currentTextProvider = StreamProvider<DisplayText?>((ref) {
   return ref.watch(displayTextRepositoryProvider).watchCurrentText();
 });
 
-final allTextTagsProvider = StreamProvider<List<String>>((ref) {
-  return ref.watch(displayTextRepositoryProvider).watchAllTextTags();
+/// Tags van de actieve teksten met hun aantal; ongebruikte tags vallen
+/// vanzelf weg.
+final textTagCountsProvider = Provider<Map<String, int>>((ref) {
+  final texts = ref.watch(allActiveTextsProvider).value ?? const [];
+  return countTags(texts.map((text) => text.tags));
 });
 
-/// Manages the state of the currently selected tag for filtering.
-class SelectedTagNotifier extends Notifier<String?> implements TagNotifier {
-  @override
-  String? build() {
-    // The initial state of the filter is null (showing all items).
-    return null;
-  }
-
-  /// Sets the filter to a new tag, or null to clear the filter.
-  @override
-  void setTag(String? newTag) {
-    state = newTag;
-  }
-}
-
-final selectedTagProvider = NotifierProvider<SelectedTagNotifier, String?>(
-  SelectedTagNotifier.new,
-);
+final selectedTagsProvider =
+    NotifierProvider<TagSelectionNotifier, Set<String>>(
+      TagSelectionNotifier.new,
+    );
 
 /// Manages the state of the search query string for filtering texts.
 class SearchQueryNotifier extends Notifier<String> implements SearchNotifier {

@@ -165,6 +165,14 @@ service cloud.firestore {
         allow write: if isTrainerOrAdmin(clubId);
       }
 
+      // ------------------------------------------- Training-templates
+      // Bibliotheek van bewaarde Set/Subset/Oefening-kaarten (met tags),
+      // zelfde regels als de tabata-bibliotheek.
+      match /trainingTemplates/{templateId} {
+        allow read: if isActiveMember(clubId);
+        allow write: if isTrainerOrAdmin(clubId);
+      }
+
       // ------------------------------------------------------ Displays
       // Bestaande display-feature. Schrijven: trainers en clubadmins.
       // Lezen staat open zodat het (ongeauthenticeerde) display-web-app de

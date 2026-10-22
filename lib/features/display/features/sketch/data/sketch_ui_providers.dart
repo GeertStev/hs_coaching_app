@@ -79,18 +79,11 @@ final selectedElementIdProvider =
       SelectedElementIdNotifier.new,
     );
 
-/// Beheert de geselecteerde tag ten behoeve van de filter-UI in de lijst.
-class SelectedTagNotifier extends Notifier<String?> implements TagNotifier {
-  @override
-  String? build() => null;
-
-  @override
-  void setTag(String? newTag) => state = newTag;
-}
-
-final selectedTagProvider = NotifierProvider<SelectedTagNotifier, String?>(
-  SelectedTagNotifier.new,
-);
+/// De geselecteerde filter-tags van de sketchlijst.
+final selectedTagsProvider =
+    NotifierProvider<TagSelectionNotifier, Set<String>>(
+      TagSelectionNotifier.new,
+    );
 
 /// Beheert de zoekquery voor de sketchlijst met een ingebouwde debounce van 500ms.
 class SearchQueryNotifier extends Notifier<String> implements SearchNotifier {

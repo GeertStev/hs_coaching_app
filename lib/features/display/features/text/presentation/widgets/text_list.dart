@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hs_coaching_app/features/display/features/text/data/display_text_repository.dart';
 import 'package:hs_coaching_app/features/display/features/text/data/display_text_providers.dart';
 import 'package:hs_coaching_app/features/display/features/text/presentation/display_text_controller.dart';
 import 'package:hs_coaching_core/text/display_text.dart';
@@ -33,7 +34,7 @@ class _TextListState extends ConsumerState<TextList> {
   }
 
   Future<void> _showEditTextSheet(DisplayText textItem) async {
-    final allTags = ref.read(allTextTagsProvider).value ?? [];
+    final allTags = ref.read(textTagCountsProvider).keys.toList();
     _textController.text = textItem.text;
 
     final result = await showModalBottomSheet<ContentEditDialogResult>(
@@ -75,12 +76,14 @@ class _TextListState extends ConsumerState<TextList> {
   @override
   Widget build(BuildContext context) {
     return ContentList<DisplayText>(
-      itemsProvider: allActiveTextsProvider.call,
+      itemsProvider: allActiveTextsProvider,
       searchQueryProvider: searchQueryProvider,
       itemTypeSingular: 'text',
       itemTypePlural: 'texts',
-      allTagsProvider: allTextTagsProvider,
-      selectedTagProvider: selectedTagProvider,
+      tagCountsProvider: textTagCountsProvider,
+      selectedTagsProvider: selectedTagsProvider,
+      tagMaintenanceProvider: displayTextRepositoryProvider,
+      tagsOf: (text) => text.tags,
       filterPredicate: (text, query) {
         final titleMatch = text.title?.toLowerCase().contains(query) ?? false;
         final contentMatch = text.text.toLowerCase().contains(query);

@@ -24,7 +24,7 @@ class _SketchControlScreenState extends ConsumerState<SketchControlScreen> {
   Future<void> _createNewSketch() async {
     /*String? selectedBackgroundUrl;
     final allBackgrounds = ref.read(sketchBackgroundsProvider).value ?? [];*/
-    final allTags = ref.read(allSketchTagsProvider).value ?? [];
+    final allTags = ref.read(sketchTagCountsProvider).keys.toList();
 
     final result = await showModalBottomSheet<ContentEditDialogResult>(
       context: context,

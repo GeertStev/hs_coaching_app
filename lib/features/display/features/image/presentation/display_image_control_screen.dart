@@ -22,7 +22,7 @@ class ImageControlScreen extends ConsumerWidget {
 
     Future<void> handleAddImage() async {
       File? imageFile;
-      final allTags = ref.read(allImageTagsProvider).value ?? [];
+      final allTags = ref.read(imageTagCountsProvider).keys.toList();
 
       // UI Logica: Tonen van de dialoog
       final result = await showModalBottomSheet<ContentEditDialogResult>(

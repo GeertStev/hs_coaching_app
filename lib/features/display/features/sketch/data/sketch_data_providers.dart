@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_core/core/providers/display_device_ids_provider.dart';
 import 'package:hs_coaching_app/features/display/features/sketch/data/sketch_repository.dart';
+import 'package:hs_coaching_app/features/display/features/tag_and_search/domain/tag_ops.dart';
 import 'package:hs_coaching_core/sketch/sketch.dart';
 import 'package:hs_coaching_core/sketch/sketch_background.dart';
 import 'package:hs_coaching_core/sketch/sketch_element.dart';
@@ -25,17 +26,16 @@ final currentSketchIdDocProvider = StreamProvider<String?>((ref) {
   return ref.watch(sketchRepositoryProvider).watchCurrentSketchId();
 });
 
-/// Streamed de lijst met alle actieve sketches, optioneel gefilterd op tag.
-final sketchListStreamProvider = StreamProvider.family<List<Sketch>, String?>((
-  ref,
-  tag,
-) {
-  return ref.watch(sketchRepositoryProvider).watchAllActiveSketches(tag: tag);
+/// Streamed de lijst met alle actieve sketches.
+final sketchListStreamProvider = StreamProvider<List<Sketch>>((ref) {
+  return ref.watch(sketchRepositoryProvider).watchAllActiveSketches();
 });
 
-/// Streamed alle beschikbare sketch-tags voor het filtersysteem.
-final allSketchTagsProvider = StreamProvider<List<String>>((ref) {
-  return ref.watch(sketchRepositoryProvider).watchAllSketchTags();
+/// Tags van de actieve sketches met hun aantal, voor het filtersysteem;
+/// ongebruikte tags vallen vanzelf weg.
+final sketchTagCountsProvider = Provider<Map<String, int>>((ref) {
+  final sketches = ref.watch(sketchListStreamProvider).value ?? const [];
+  return countTags(sketches.map((sketch) => sketch.tags));
 });
 
 /// Streamed de metadata van één specifieke sketch op basis van zijn ID.

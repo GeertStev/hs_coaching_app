@@ -36,7 +36,7 @@ class _TextControlScreenState extends ConsumerState<TextControlScreen> {
     // Zorg dat hij leeg is voor je een nieuwe toevoegt
     _textController.clear();
 
-    final allTags = ref.read(allTextTagsProvider).value ?? [];
+    final allTags = ref.read(textTagCountsProvider).keys.toList();
 
     final result = await showModalBottomSheet<ContentEditDialogResult>(
       context: context,

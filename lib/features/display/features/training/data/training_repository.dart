@@ -3,6 +3,7 @@ import 'package:hs_coaching_core/training/display_training_repository.dart';
 import 'package:hs_coaching_core/training/training.dart';
 import 'package:hs_coaching_core/training/training_status.dart';
 import 'package:hs_coaching_core/training/training_validation.dart';
+import 'package:hs_coaching_app/features/display/features/tag_and_search/data/tag_maintenance.dart';
 import 'package:hs_coaching_app/features/display/features/training/domain/training_template.dart';
 import 'package:hs_coaching_core/core/errors/user_message.dart';
 
@@ -27,7 +28,8 @@ class TrainingShapeException implements UserFacingException {
 /// als Tabata/Chrono's singleton-config) — geen aparte kaart-collectie, dus
 /// elke boom-mutatie (via `training_tree.dart`'s zuivere functies) schrijft
 /// de volledige boom in één keer terug, net als Tabata's `saveConfig`.
-class TrainingRepository extends DisplayTrainingRepository {
+class TrainingRepository extends DisplayTrainingRepository
+    implements TagMaintenance {
   TrainingRepository({
     required super.firestore,
     required super.clubId,
@@ -158,6 +160,7 @@ class TrainingRepository extends DisplayTrainingRepository {
               ),
               payload: (data['payload'] as Map<String, dynamic>?) ?? const {},
               height: (data['height'] as num?)?.toInt() ?? 1,
+              tags: List<String>.from(data['tags'] as List? ?? const []),
             );
           }).toList(),
         );
@@ -167,16 +170,38 @@ class TrainingRepository extends DisplayTrainingRepository {
     String title,
     TrainingTemplateKind kind,
     Map<String, dynamic> payload,
-    int height,
-  ) async {
+    int height, {
+    List<String> tags = const [],
+  }) async {
     await _templatesRef.add({
       'title': title,
       'kind': kind.name,
       'payload': payload,
       'height': height,
+      'tags': tags,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
+
+  /// Past titel en tags van een bewaarde template aan; de inhoud blijft.
+  Future<void> updateTemplate(
+    String templateId, {
+    required String title,
+    required List<String> tags,
+  }) async {
+    await _templatesRef.doc(templateId).update({'title': title, 'tags': tags});
+  }
+
+  @override
+  Future<void> renameTag(String from, String to) => renameTagInCollection(
+    firestore: firestore,
+    collectionPath: _templatesRef.path,
+    from: from,
+    to: to,
+  );
+
+  @override
+  Future<void> deleteTag(String tag) => renameTag(tag, '');
 
   Future<void> deleteTemplate(String templateId) async {
     await _templatesRef.doc(templateId).delete();

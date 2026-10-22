@@ -1,15 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:hs_coaching_app/features/display/application/search_service.dart';
+import 'package:hs_coaching_app/features/display/features/tag_and_search/domain/tag_ops.dart';
 import 'package:hs_coaching_app/features/display/features/image/data/display_image_repository.dart';
 import 'package:hs_coaching_core/image/display_image.dart';
 
-final allActiveImagesProvider =
-    StreamProvider.family<List<DisplayImage>, String?>((ref, tag) {
-      return ref
-          .watch(displayImageRepositoryProvider)
-          .watchAllActiveImages(tag: tag);
-    });
+final allActiveImagesProvider = StreamProvider<List<DisplayImage>>((ref) {
+  return ref.watch(displayImageRepositoryProvider).watchAllActiveImages();
+});
 
 final currentImageIdProvider = StreamProvider<String?>((ref) {
   return ref.watch(displayImageRepositoryProvider).watchCurrentImageId();
@@ -19,21 +17,17 @@ final currentImageProvider = StreamProvider<DisplayImage?>((ref) {
   return ref.watch(displayImageRepositoryProvider).watchCurrentImage();
 });
 
-final allImageTagsProvider = StreamProvider<List<String>>((ref) {
-  return ref.watch(displayImageRepositoryProvider).watchAllImageTags();
+/// Tags van de actieve afbeeldingen met hun aantal; ongebruikte tags vallen
+/// vanzelf weg.
+final imageTagCountsProvider = Provider<Map<String, int>>((ref) {
+  final images = ref.watch(allActiveImagesProvider).value ?? const [];
+  return countTags(images.map((image) => image.tags));
 });
 
-/// Manages the state of the currently selected tag for filtering.
-class SelectedTagNotifier extends Notifier<String?> implements TagNotifier {
-  @override
-  String? build() => null;
-  @override
-  void setTag(String? newTag) => state = newTag;
-}
-
-final selectedTagProvider = NotifierProvider<SelectedTagNotifier, String?>(
-  SelectedTagNotifier.new,
-);
+final selectedTagsProvider =
+    NotifierProvider<TagSelectionNotifier, Set<String>>(
+      TagSelectionNotifier.new,
+    );
 
 /// Manages the state of the search query string for filtering images.
 class SearchQueryNotifier extends Notifier<String> implements SearchNotifier {
