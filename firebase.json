@@ -1,0 +1,28 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "database": {
+    "rules": "database.rules.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "hs-coaching",
+          "appId": "1:173364683849:android:32b52e8f02578b09bbcb98",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "hs-coaching",
+          "configurations": {
+            "android": "1:173364683849:android:32b52e8f02578b09bbcb98"
+          }
+        }
+      }
+    }
+  }
+}
