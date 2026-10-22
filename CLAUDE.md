@@ -14,7 +14,7 @@ Extra stack on top of core: `firebase_auth`, `firebase_messaging`, `perfect_free
 `lib/features/<feature>/{data,domain,presentation}`, cross-cutting code in `lib/core/`
 (`providers/riverpod_config.dart`, `theme/`). The content types live under
 `lib/features/display/features/<type>/`; `display/presentation/` holds the shared content
-list/card/edit-dialog scaffolding. `timer_old/` is legacy and unused: don't build on it.
+list/card/edit-dialog scaffolding.
 
 UI styling rules load from `.claude/rules/theming.md` when working on presentation code.
 
@@ -25,7 +25,7 @@ clubs/{clubId}                  # Club
   members/{uid}                 # ClubMembership: role (player|trainer|clubAdmin), status (pending|active),
                                 #   teamIds, uid+clubId as fields for collection-group queries
   teams/{teamId}  invites/{code}  tabataPresets/{id}
-  timerExercises/{id}  timerSets/{id}   # legacy timer library (timer_old)
+  timerExercises/{id}  timerSets/{id}   # legacy timer library, code removed; data + rules remain
 inviteCodes/{code}              # get-only mirror for the join flow (the code is the secret)
 users/{uid}                     # AppUser; profile pictures in Storage at user_pictures/{uid}.jpg
 ```
@@ -59,5 +59,4 @@ users/{uid}                     # AppUser; profile pictures in Storage at user_p
   is retried by default and Firestore re-emits cache in between, so the UI flickers and the real
   error never shows. Handled globally by `appProviderRetry` + `AppProviderObserver`
   (`core/providers/riverpod_config.dart`, registered in `main.dart`). Keep them on the `ProviderScope`.
-- `lib/main.dart` still contains an old Dutch prompt/TODO block; the Riverpod rules in it are
-  summarized in core's `CLAUDE.md`. Open work is tracked as GitHub issues, not in this file.
+- Open work is tracked as GitHub issues, not in code comments or this file.
