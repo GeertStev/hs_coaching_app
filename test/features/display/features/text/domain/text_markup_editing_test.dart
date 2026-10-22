@@ -69,4 +69,27 @@ void main() {
       expect(result.text, '## a\n## b\nc');
     });
   });
+
+  group('blokken invoegen', () {
+    test('kolommen op een lege tekst: cursor in kolom 1', () {
+      final result = insertColumns(const TextEditingValue(text: ''));
+      expect(result.text, '{\n\n}\n{\n\n}');
+      expect(result.selection, const TextSelection.collapsed(offset: 2));
+    });
+
+    test('midden in een regel komt het blok op eigen regels', () {
+      final result = insertColumns(value('ab', 1));
+      expect(result.text, 'a\n{\n\n}\n{\n\n}\nb');
+      expect(result.selection, const TextSelection.collapsed(offset: 4));
+    });
+
+    test('tabel: Header 1 geselecteerd', () {
+      final result = insertTable(value('intro\n', 6));
+      expect(result.text, startsWith('intro\n| Header 1 |'));
+      expect(
+        result.text.substring(result.selection.start, result.selection.end),
+        'Header 1',
+      );
+    });
+  });
 }

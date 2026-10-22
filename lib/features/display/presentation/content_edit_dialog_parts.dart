@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/display/features/text/domain/text_markup_editing.dart';
-import 'package:hs_coaching_core/text/text_markup_span.dart';
+import 'package:hs_coaching_core/text/text_markup_view.dart';
 
 /// Content-specific widget for editing text content, met opmaakknoppen
-/// (vet, cursief, onderlijnd, twee titelgroottes) en een voorbeeld van hoe
+/// (vet, cursief, onderlijnd, twee titelgroottes, kolommen, tabel) en een voorbeeld van hoe
 /// de opgemaakte tekst op het scherm komt. De opmaak wordt als codes in de
 /// tekst bewaard (zie core's `text_markup.dart`).
 class TextContentEditor extends StatefulWidget {
@@ -67,6 +67,16 @@ class _TextContentEditorState extends State<TextContentEditor> {
               onPressed: () => _apply((v) => toggleHeading(v, 2)),
             ),
             IconButton(
+              tooltip: 'Columns',
+              icon: const Icon(Icons.view_column_outlined),
+              onPressed: () => _apply(insertColumns),
+            ),
+            IconButton(
+              tooltip: 'Table',
+              icon: const Icon(Icons.table_chart_outlined),
+              onPressed: () => _apply(insertTable),
+            ),
+            IconButton(
               tooltip: _showPreview ? 'Hide preview' : 'Show preview',
               isSelected: _showPreview,
               icon: const Icon(Icons.visibility_outlined),
@@ -118,13 +128,12 @@ class _TextMarkupPreview extends StatelessWidget {
         padding: EdgeInsets.all(Theme.of(context).appMetrics.cardPadding),
         child: SizedBox(
           width: double.infinity,
-          child: Text.rich(
-            buildTextMarkupSpan(
-              source,
-              bodyStyle: body,
-              heading1Style: textTheme.headlineMedium ?? body,
-              heading2Style: textTheme.headlineSmall ?? body,
-            ),
+          child: TextMarkupView(
+            source,
+            bodyStyle: body,
+            heading1Style: textTheme.headlineMedium ?? body,
+            heading2Style: textTheme.headlineSmall ?? body,
+            lineColor: Theme.of(context).colorScheme.outlineVariant,
           ),
         ),
       ),
