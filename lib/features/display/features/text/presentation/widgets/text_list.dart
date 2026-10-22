@@ -4,6 +4,7 @@ import 'package:hs_coaching_app/features/display/features/text/data/display_text
 import 'package:hs_coaching_app/features/display/features/text/data/display_text_providers.dart';
 import 'package:hs_coaching_app/features/display/features/text/presentation/display_text_controller.dart';
 import 'package:hs_coaching_core/text/display_text.dart';
+import 'package:hs_coaching_core/text/text_markup.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_edit_dialog_parts.dart';
 import 'package:hs_coaching_app/features/display/presentation/content_item_card.dart';
@@ -86,7 +87,9 @@ class _TextListState extends ConsumerState<TextList> {
       tagsOf: (text) => text.tags,
       filterPredicate: (text, query) {
         final titleMatch = text.title?.toLowerCase().contains(query) ?? false;
-        final contentMatch = text.text.toLowerCase().contains(query);
+        final contentMatch = stripTextMarkup(
+          text.text,
+        ).toLowerCase().contains(query);
         final tagMatch = text.tags.any(
           (tag) => tag.toLowerCase().contains(query),
         );
@@ -108,7 +111,7 @@ class _TextListState extends ConsumerState<TextList> {
           onTap: () => controller.toggleCurrent(textItem.id, isCurrent),
           child: ItemTile(
             title: textItem.title,
-            subtitle: textItem.text,
+            subtitle: stripTextMarkup(textItem.text),
             dateModified: textItem.timestamp,
             onPrimaryIconPressed: () => _showEditTextSheet(textItem),
           ),
