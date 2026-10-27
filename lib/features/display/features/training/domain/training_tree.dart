@@ -83,15 +83,13 @@ Training removeAt(Training training, TrainingPath path) {
   }
 
   if (path.length == 1) {
-    final copy = List<TrainingNode>.of(training.children)
-      ..removeAt(path[0]);
+    final copy = List<TrainingNode>.of(training.children)..removeAt(path[0]);
     return training.copyWith(children: copy);
   }
 
   final parentPath = path.sublist(0, path.length - 1);
   final parentGroup = _asGroup(nodeAt(training, parentPath));
-  final copy = List<TrainingNode>.of(parentGroup.children)
-    ..removeAt(path.last);
+  final copy = List<TrainingNode>.of(parentGroup.children)..removeAt(path.last);
 
   if (copy.isEmpty) {
     return removeAt(training, parentPath);
@@ -114,14 +112,12 @@ Training insertAt(
   TrainingNode node,
 ) {
   if (parentPath.isEmpty) {
-    final copy = List<TrainingNode>.of(training.children)
-      ..insert(index, node);
+    final copy = List<TrainingNode>.of(training.children)..insert(index, node);
     return training.copyWith(children: copy);
   }
 
   final parentGroup = _asGroup(nodeAt(training, parentPath));
-  final copy = List<TrainingNode>.of(parentGroup.children)
-    ..insert(index, node);
+  final copy = List<TrainingNode>.of(parentGroup.children)..insert(index, node);
   return replaceAt(
     training,
     parentPath,
@@ -223,7 +219,8 @@ Training groupWithTarget(
   final targetNode = nodeAt(training, targetPath);
   final targetParent = targetPath.sublist(0, targetPath.length - 1);
 
-  if (sourceNode is TrainingNodeExercise && targetNode is TrainingNodeExercise) {
+  if (sourceNode is TrainingNodeExercise &&
+      targetNode is TrainingNodeExercise) {
     return _wrapIntoNewGroup(
       training,
       sourcePath,

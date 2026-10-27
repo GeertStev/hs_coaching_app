@@ -712,7 +712,6 @@ class _ValuePillState extends State<_ValuePill> {
   }
 
   Future<void> _openInput() async {
-    _focusNode.requestFocus();
     final index = await showTrainingWheelPicker(
       context,
       title: widget.title,
@@ -756,7 +755,9 @@ class _ValuePillState extends State<_ValuePill> {
       return KeyEventResult.ignored;
     }
     final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.arrowDown) {
+    if (key == LogicalKeyboardKey.escape) {
+      _focusNode.unfocus();
+    } else if (key == LogicalKeyboardKey.arrowDown) {
       _step(1);
     } else if (key == LogicalKeyboardKey.arrowUp) {
       _step(-1);
@@ -773,71 +774,78 @@ class _ValuePillState extends State<_ValuePill> {
 
   @override
   Widget build(BuildContext context) {
-    final pill = Focus(
-      focusNode: _focusNode,
-      onKeyEvent: _onKey,
-      onFocusChange: (focused) => setState(() => _focused = focused),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Material(
-          color: widget.color.withValues(alpha: _focused ? 0.24 : 0.12),
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            width: _width,
-            height: _itemExtent,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: widget.color,
-                width: _focused ? 2.5 : 1.5,
+    // Klikken geeft de pill geen focus (enkel Tab doet dat); klikken naast
+    // de pill of Escape laat de focus weer los.
+    final pill = TapRegion(
+      onTapOutside: (_) {
+        if (_focusNode.hasFocus) _focusNode.unfocus();
+      },
+      child: Focus(
+        focusNode: _focusNode,
+        onKeyEvent: _onKey,
+        onFocusChange: (focused) => setState(() => _focused = focused),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Material(
+            color: widget.color.withValues(alpha: _focused ? 0.24 : 0.12),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: _width,
+              height: _itemExtent,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: widget.color,
+                  width: _focused ? 2.5 : 1.5,
+                ),
               ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(6.5),
-              child: GestureDetector(
-                onTap: _openInput,
-                onLongPress: widget.onLongPress,
-                onSecondaryTapUp: (details) =>
-                    _showContextMenu(details.globalPosition),
-                // ScrollEndNotification i.p.v. rechtstreeks in
-                // onSelectedItemChanged: dat laatste vuurt bij élke
-                // tussenliggende index tijdens een sleep/fling-gebaar.
-                // widget.onChanged loopt via copyWith helemaal terug naar de
-                // root van de trainingsboom, wat een rebuild van de hele
-                // kaartenlijst triggert — bij een fling door bv. 20 items
-                // dus 20 volle rebuilds. Lokaal (setState) blijft de tekst
-                // wel live meebewegen tijdens het slepen; enkel het
-                // "vastklikken" van de waarde wacht tot het wiel tot rust
-                // komt.
-                child: NotificationListener<ScrollEndNotification>(
-                  onNotification: (notification) {
-                    if (!_jumping) {
-                      _commitTimer?.cancel();
-                      widget.onChanged(_selectedIndex);
-                    }
-                    return false;
-                  },
-                  child: mouseDraggableWheel(
-                    context,
-                    ListWheelScrollView.useDelegate(
-                      controller: _controller,
-                      itemExtent: _itemExtent,
-                      diameterRatio: 1.8,
-                      perspective: 0.003,
-                      physics: const FixedExtentScrollPhysics(),
-                      onSelectedItemChanged: (index) =>
-                          setState(() => _selectedIndex = index),
-                      childDelegate: ListWheelChildBuilderDelegate(
-                        childCount: widget.items.length,
-                        builder: (context, index) => WheelItemScrollListener(
-                          stepper: _stepper,
-                          canStep: _canStep,
-                          onStep: _step,
-                          child: Center(
-                            child: Text(
-                              widget.items[index],
-                              style: _kValuePillTextStyle.copyWith(
-                                color: widget.color,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6.5),
+                child: GestureDetector(
+                  onTap: _openInput,
+                  onLongPress: widget.onLongPress,
+                  onSecondaryTapUp: (details) =>
+                      _showContextMenu(details.globalPosition),
+                  // ScrollEndNotification i.p.v. rechtstreeks in
+                  // onSelectedItemChanged: dat laatste vuurt bij élke
+                  // tussenliggende index tijdens een sleep/fling-gebaar.
+                  // widget.onChanged loopt via copyWith helemaal terug naar de
+                  // root van de trainingsboom, wat een rebuild van de hele
+                  // kaartenlijst triggert — bij een fling door bv. 20 items
+                  // dus 20 volle rebuilds. Lokaal (setState) blijft de tekst
+                  // wel live meebewegen tijdens het slepen; enkel het
+                  // "vastklikken" van de waarde wacht tot het wiel tot rust
+                  // komt.
+                  child: NotificationListener<ScrollEndNotification>(
+                    onNotification: (notification) {
+                      if (!_jumping) {
+                        _commitTimer?.cancel();
+                        widget.onChanged(_selectedIndex);
+                      }
+                      return false;
+                    },
+                    child: mouseDraggableWheel(
+                      context,
+                      ListWheelScrollView.useDelegate(
+                        controller: _controller,
+                        itemExtent: _itemExtent,
+                        diameterRatio: 1.8,
+                        perspective: 0.003,
+                        physics: const FixedExtentScrollPhysics(),
+                        onSelectedItemChanged: (index) =>
+                            setState(() => _selectedIndex = index),
+                        childDelegate: ListWheelChildBuilderDelegate(
+                          childCount: widget.items.length,
+                          builder: (context, index) => WheelItemScrollListener(
+                            stepper: _stepper,
+                            canStep: _canStep,
+                            onStep: _step,
+                            child: Center(
+                              child: Text(
+                                widget.items[index],
+                                style: _kValuePillTextStyle.copyWith(
+                                  color: widget.color,
+                                ),
                               ),
                             ),
                           ),

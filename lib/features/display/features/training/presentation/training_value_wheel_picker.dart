@@ -43,20 +43,43 @@ Widget mouseDraggableWheel(BuildContext context, Widget wheel) {
   );
 }
 
-/// Zet scrollwiel-beweging om in stappen van precies één item. Een
-/// muiswiel-klik levert in één event een grote delta (~100 px), een
-/// trackpad veel kleine: die worden opgeteld tot [threshold].
+/// Zet scrollwiel-beweging om in stappen van precies één item. Hoe één
+/// wielklik binnenkomt verschilt per muis/browser: één event van ~100 px,
+/// of (smooth scrolling, Windows) een reeks kleine events binnen ~200 ms.
+/// Daarom: een groot event (≥ [notchDelta]) is altijd precies één stap.
+/// Bij kleine events is het eerste na een pauze ([burstGap]) meteen één
+/// stap, en volgt binnen dezelfde reeks pas een volgende stap per
+/// [stepDistance] extra beweging. Zo geeft één klik altijd één stap, en
+/// blijven snel doordraaien of een trackpad toch meerdere stappen doen.
 class WheelScrollStepper {
-  static const threshold = 40.0;
+  static const burstGap = Duration(milliseconds: 200);
+  static const stepDistance = 120.0;
+  static const notchDelta = 50.0;
+
+  Duration? _lastEvent;
+  int _lastDirection = 0;
   double _accumulated = 0;
 
-  /// +1 (volgend item), -1 (vorig) of 0 (nog geen volle stap).
-  int add(double dy) {
+  /// +1 (volgend item), -1 (vorig) of 0 (geen stap). [timeStamp] is die
+  /// van het pointer-event.
+  int add(double dy, Duration timeStamp) {
+    if (dy == 0) return 0;
+    final last = _lastEvent;
+    _lastEvent = timeStamp;
+    final direction = dy > 0 ? 1 : -1;
+    final newBurst =
+        last == null ||
+        timeStamp - last > burstGap ||
+        direction != _lastDirection;
+    _lastDirection = direction;
+    if (newBurst || dy.abs() >= notchDelta) {
+      _accumulated = 0;
+      return direction;
+    }
     _accumulated += dy;
-    if (_accumulated.abs() < threshold) return 0;
-    final step = _accumulated > 0 ? 1 : -1;
+    if (_accumulated.abs() < stepDistance) return 0;
     _accumulated = 0;
-    return step;
+    return direction;
   }
 }
 
@@ -87,7 +110,10 @@ class WheelItemScrollListener extends StatelessWidget {
         final dy = event.scrollDelta.dy;
         if (dy == 0 || !canStep(dy > 0 ? 1 : -1)) return;
         GestureBinding.instance.pointerSignalResolver.register(event, (e) {
-          final step = stepper.add((e as PointerScrollEvent).scrollDelta.dy);
+          final step = stepper.add(
+            (e as PointerScrollEvent).scrollDelta.dy,
+            e.timeStamp,
+          );
           if (step != 0) onStep(step);
         });
       },

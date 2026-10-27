@@ -5,6 +5,40 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hs_coaching_app/features/display/features/training/presentation/training_value_wheel_picker.dart';
 
 void main() {
+  group('WheelScrollStepper', () {
+    Duration ms(int v) => Duration(milliseconds: v);
+
+    test('één grote wielklik is één stap', () {
+      final stepper = WheelScrollStepper();
+      expect(stepper.add(100, ms(0)), 1);
+      expect(stepper.add(-100, ms(1000)), -1);
+    });
+
+    test('een reeks kleine events (smooth scrolling) is ook één stap', () {
+      final stepper = WheelScrollStepper();
+      final steps = [for (var i = 0; i < 6; i++) stepper.add(20, ms(i * 15))];
+      expect(steps.where((s) => s != 0).length, 1);
+    });
+
+    test('snel na elkaar grote wielklikken: elk één stap', () {
+      final stepper = WheelScrollStepper();
+      final steps = [for (var i = 0; i < 3; i++) stepper.add(100, ms(i * 100))];
+      expect(steps, [1, 1, 1]);
+    });
+
+    test('snel doordraaien met kleine events geeft meerdere stappen', () {
+      final stepper = WheelScrollStepper();
+      final steps = [for (var i = 0; i < 5; i++) stepper.add(120, ms(i * 50))];
+      expect(steps.fold<int>(0, (a, b) => a + b), greaterThan(3));
+    });
+
+    test('van richting veranderen stapt meteen terug', () {
+      final stepper = WheelScrollStepper();
+      expect(stepper.add(100, ms(0)), 1);
+      expect(stepper.add(-30, ms(50)), -1);
+    });
+  });
+
   final items = numericWheelItems(
     min: 1,
     max: 20,
@@ -37,9 +71,7 @@ void main() {
     return results;
   }
 
-  testWidgets('waarde typen + Enter geeft de index terug', (
-    tester,
-  ) async {
+  testWidgets('waarde typen + Enter geeft de index terug', (tester) async {
     final results = await openPicker(tester);
     await tester.enterText(find.byType(TextField), '12');
     await tester.testTextInput.receiveAction(TextInputAction.done);
