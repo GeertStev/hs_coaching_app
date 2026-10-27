@@ -88,14 +88,9 @@ class TrainingGroupCard extends ConsumerWidget {
     if (!context.mounted) return;
     switch (result) {
       case TrainingMutationApplied():
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Changed'),
-            action: SnackBarAction(
-              label: 'Undo',
-              onPressed: () => ref.read(trainingCommandsProvider).undo(),
-            ),
-          ),
+        showTrainingUndoSnackBar(
+          context,
+          onUndo: () => ref.read(trainingCommandsProvider).undo(),
         );
       case TrainingMutationRejected(:final reason):
         ScaffoldMessenger.of(
