@@ -51,16 +51,16 @@ class _TitleDialogState extends State<_TitleDialog> {
         controller: _controller,
         autofocus: true,
         textCapitalization: TextCapitalization.sentences,
-        decoration: const InputDecoration(labelText: 'Titel'),
+        decoration: const InputDecoration(labelText: 'Title'),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuleren'),
+          child: const Text('Cancel'),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
-          child: const Text('Bewaren'),
+          child: const Text('Save'),
         ),
       ],
     );
@@ -127,7 +127,7 @@ class _TemplatePickerDialogState extends State<_TemplatePickerDialog> {
         if (widget.templates.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: Text('Nog geen templates opgeslagen op dit niveau.'),
+            child: Text('No templates saved at this level yet.'),
           )
         else if (visible.isEmpty)
           const Padding(
@@ -248,16 +248,16 @@ Future<bool?> showTrainingDeleteConfirmDialog(
   return showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Verwijderen?'),
-      content: Text('"$itemLabel" wordt definitief verwijderd.'),
+      title: const Text('Delete?'),
+      content: Text('"$itemLabel" will be deleted permanently.'),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Annuleren'),
+          child: const Text('Cancel'),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Verwijderen'),
+          child: const Text('Delete'),
         ),
       ],
     ),

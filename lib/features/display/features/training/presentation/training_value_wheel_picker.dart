@@ -1,4 +1,9 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:hs_coaching_app/features/display/features/training/domain/training_value_input.dart';
+
+export 'package:hs_coaching_app/features/display/features/training/domain/training_value_input.dart';
 
 /// Genereert de geformatteerde items voor een numeriek veld met een vaste
 /// stapgrootte tussen [min] en [max] (beide inclusief).
@@ -25,22 +30,120 @@ int numericWheelIndex({
   return ((clamped - min) / step).round();
 }
 
+/// Laat de muis ook slepen in een wiel: Flutter staat slepen in een
+/// scrollbare lijst standaard enkel toe voor touch/stylus, waardoor de
+/// wielen op web/desktop met de muis niet te draaien waren.
+Widget mouseDraggableWheel(BuildContext context, Widget wheel) {
+  return ScrollConfiguration(
+    behavior: ScrollConfiguration.of(context).copyWith(
+      dragDevices: PointerDeviceKind.values.toSet(),
+      scrollbars: false,
+    ),
+    child: wheel,
+  );
+}
+
+/// Zet scrollwiel-beweging om in stappen van precies één item. Hoe één
+/// wielklik binnenkomt verschilt per muis/browser: één event van ~100 px,
+/// of (smooth scrolling, Windows) een reeks kleine events binnen ~200 ms.
+/// Daarom: een groot event (≥ [notchDelta]) is altijd precies één stap.
+/// Bij kleine events is het eerste na een pauze ([burstGap]) meteen één
+/// stap, en volgt binnen dezelfde reeks pas een volgende stap per
+/// [stepDistance] extra beweging. Zo geeft één klik altijd één stap, en
+/// blijven snel doordraaien of een trackpad toch meerdere stappen doen.
+class WheelScrollStepper {
+  static const burstGap = Duration(milliseconds: 200);
+  static const stepDistance = 120.0;
+  static const notchDelta = 50.0;
+
+  Duration? _lastEvent;
+  int _lastDirection = 0;
+  double _accumulated = 0;
+
+  /// +1 (volgend item), -1 (vorig) of 0 (geen stap). [timeStamp] is die
+  /// van het pointer-event.
+  int add(double dy, Duration timeStamp) {
+    if (dy == 0) return 0;
+    final last = _lastEvent;
+    _lastEvent = timeStamp;
+    final direction = dy > 0 ? 1 : -1;
+    final newBurst =
+        last == null ||
+        timeStamp - last > burstGap ||
+        direction != _lastDirection;
+    _lastDirection = direction;
+    if (newBurst || dy.abs() >= notchDelta) {
+      _accumulated = 0;
+      return direction;
+    }
+    _accumulated += dy;
+    if (_accumulated.abs() < stepDistance) return 0;
+    _accumulated = 0;
+    return direction;
+  }
+}
+
+/// Vangt het muiswiel op boven een wiel-item, vóór de [Scrollable] van het
+/// wiel zelf (dieper in de hit-test, dus eerst aan de beurt bij de
+/// `pointerSignalResolver`) — anders schuift het wiel per pixel i.p.v. per
+/// item en klikt het niet vast. [canStep] geeft aan of er in die richting
+/// nog een item is; zo niet, dan scrollt de omliggende lijst gewoon verder.
+class WheelItemScrollListener extends StatelessWidget {
+  const WheelItemScrollListener({
+    super.key,
+    required this.stepper,
+    required this.canStep,
+    required this.onStep,
+    required this.child,
+  });
+
+  final WheelScrollStepper stepper;
+  final bool Function(int direction) canStep;
+  final ValueChanged<int> onStep;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      // Opaque: het hele item-vlak telt, niet enkel de pixels van de tekst
+      // (een "–" is maar een paar pixels breed). Anders viel het wiel
+      // naast de tekst terug op scrollen per pixel: één klik = vele items.
+      behavior: HitTestBehavior.opaque,
+      onPointerSignal: (event) {
+        if (event is! PointerScrollEvent) return;
+        final dy = event.scrollDelta.dy;
+        if (dy == 0 || !canStep(dy > 0 ? 1 : -1)) return;
+        GestureBinding.instance.pointerSignalResolver.register(event, (e) {
+          final step = stepper.add(
+            (e as PointerScrollEvent).scrollDelta.dy,
+            e.timeStamp,
+          );
+          if (step != 0) onStep(step);
+        });
+      },
+      child: child,
+    );
+  }
+}
+
 /// Generieke wiel-kiezer: toont [items] in een `ListWheelScrollView`. Werkt
 /// zowel voor numerieke velden (REPS/AFSTAND/INTENSITEIT/WERK/RUST/DELTA —
 /// [items] is dan een geformatteerde reeks via [numericWheelItems]) als
 /// voor vaste waardenlijsten (STROKE/ZONE) — één kaart-agnostische widget
 /// in plaats van aparte numerieke/enum-implementaties, per de wens dat
 /// beide soorten velden dezelfde wheel-picker-interactie gebruiken.
+/// [controller] is van de aanroeper, zodat getypte invoer het wiel kan
+/// meedraaien (zie [showTrainingWheelPicker]).
 class TrainingValueWheelPicker extends StatefulWidget {
   const TrainingValueWheelPicker({
     super.key,
     required this.items,
-    required this.initialIndex,
+    required this.controller,
     required this.onChanged,
   });
 
   final List<String> items;
-  final int initialIndex;
+  final FixedExtentScrollController controller;
   final ValueChanged<int> onChanged;
 
   @override
@@ -49,14 +152,16 @@ class TrainingValueWheelPicker extends StatefulWidget {
 }
 
 class _TrainingValueWheelPickerState extends State<TrainingValueWheelPicker> {
-  late int _selectedIndex = widget.initialIndex;
-  late final FixedExtentScrollController _controller =
-      FixedExtentScrollController(initialItem: widget.initialIndex);
+  late int _selectedIndex = widget.controller.initialItem;
+  final _stepper = WheelScrollStepper();
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void _step(int delta) {
+    final target = (_selectedIndex + delta).clamp(0, widget.items.length - 1);
+    widget.controller.animateToItem(
+      target,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
@@ -78,36 +183,47 @@ class _TrainingValueWheelPickerState extends State<TrainingValueWheelPicker> {
               ),
             ),
           ),
-          ListWheelScrollView.useDelegate(
-            controller: _controller,
-            itemExtent: 40,
-            diameterRatio: 1.6,
-            perspective: 0.003,
-            physics: const FixedExtentScrollPhysics(),
-            onSelectedItemChanged: (index) {
-              setState(() => _selectedIndex = index);
-              widget.onChanged(index);
-            },
-            childDelegate: ListWheelChildBuilderDelegate(
-              childCount: widget.items.length,
-              builder: (context, index) {
-                final selected = index == _selectedIndex;
-                return Center(
-                  child: Text(
-                    widget.items[index],
-                    style: TextStyle(
-                      fontSize: selected ? 22 : 16,
-                      fontFamily: 'monospace',
-                      fontWeight: selected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color: selected
-                          ? scheme.primary
-                          : scheme.onSurfaceVariant,
-                    ),
-                  ),
-                );
+          mouseDraggableWheel(
+            context,
+            ListWheelScrollView.useDelegate(
+              controller: widget.controller,
+              itemExtent: 40,
+              diameterRatio: 1.6,
+              perspective: 0.003,
+              physics: const FixedExtentScrollPhysics(),
+              onSelectedItemChanged: (index) {
+                setState(() => _selectedIndex = index);
+                widget.onChanged(index);
               },
+              childDelegate: ListWheelChildBuilderDelegate(
+                childCount: widget.items.length,
+                builder: (context, index) {
+                  final selected = index == _selectedIndex;
+                  return WheelItemScrollListener(
+                    stepper: _stepper,
+                    canStep: (direction) {
+                      final target = _selectedIndex + direction;
+                      return target >= 0 && target < widget.items.length;
+                    },
+                    onStep: _step,
+                    child: Center(
+                      child: Text(
+                        widget.items[index],
+                        style: TextStyle(
+                          fontSize: selected ? 22 : 16,
+                          fontFamily: 'monospace',
+                          fontWeight: selected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: selected
+                              ? scheme.primary
+                              : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ],
@@ -116,34 +232,151 @@ class _TrainingValueWheelPickerState extends State<TrainingValueWheelPicker> {
   }
 }
 
-/// Toont [TrainingValueWheelPicker] in een dialoog en geeft de gekozen
-/// index terug (`null` als geannuleerd).
+/// Toont een dialoog met een invulveld en [TrainingValueWheelPicker] en
+/// geeft de gekozen index terug (`null` als geannuleerd). Typen draait het
+/// wiel mee; ↑/↓ in het invulveld kiest het vorige/volgende item, Enter
+/// bevestigt. [parseInput] zet getypte tekst om naar een index (standaard:
+/// exact een van de [items], hoofdletterongevoelig).
 Future<int?> showTrainingWheelPicker(
   BuildContext context, {
   required String title,
   required List<String> items,
   required int initialIndex,
+  WheelInputParser? parseInput,
+  String? inputHint,
 }) {
-  var selectedIndex = initialIndex;
   return showDialog<int>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
-      content: TrainingValueWheelPicker(
-        items: items,
-        initialIndex: initialIndex,
-        onChanged: (index) => selectedIndex = index,
+    builder: (context) => _WheelPickerDialog(
+      title: title,
+      items: items,
+      initialIndex: initialIndex,
+      parseInput: parseInput ?? listInputParser(items),
+      inputHint: inputHint,
+    ),
+  );
+}
+
+class _WheelPickerDialog extends StatefulWidget {
+  const _WheelPickerDialog({
+    required this.title,
+    required this.items,
+    required this.initialIndex,
+    required this.parseInput,
+    this.inputHint,
+  });
+
+  final String title;
+  final List<String> items;
+  final int initialIndex;
+  final WheelInputParser parseInput;
+  final String? inputHint;
+
+  @override
+  State<_WheelPickerDialog> createState() => _WheelPickerDialogState();
+}
+
+class _WheelPickerDialogState extends State<_WheelPickerDialog> {
+  late int _selectedIndex = widget.initialIndex;
+  late final _wheelController = FixedExtentScrollController(
+    initialItem: widget.initialIndex,
+  );
+  late final _textController =
+      TextEditingController(text: widget.items[widget.initialIndex])
+        ..selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: widget.items[widget.initialIndex].length,
+        );
+  bool _invalid = false;
+  // Waar tijdens het meedraaien vanuit getypte tekst, zodat het wiel de
+  // tekst die de coach aan het typen is niet overschrijft.
+  bool _syncingFromText = false;
+
+  @override
+  void dispose() {
+    _wheelController.dispose();
+    _textController.dispose();
+    super.dispose();
+  }
+
+  void _onTextChanged(String text) {
+    final index = widget.parseInput(text);
+    setState(() => _invalid = index == null);
+    if (index == null || index == _selectedIndex) return;
+    _syncingFromText = true;
+    _wheelController.jumpToItem(index);
+    _syncingFromText = false;
+  }
+
+  void _onWheelChanged(int index) {
+    _selectedIndex = index;
+    if (_syncingFromText) return;
+    final text = widget.items[index];
+    _textController.value = TextEditingValue(
+      text: text,
+      selection: TextSelection(baseOffset: 0, extentOffset: text.length),
+    );
+    if (_invalid) setState(() => _invalid = false);
+  }
+
+  void _step(int delta) {
+    final target = (_selectedIndex + delta).clamp(0, widget.items.length - 1);
+    _wheelController.jumpToItem(target);
+  }
+
+  void _submit() {
+    if (_invalid) return;
+    Navigator.of(context).pop(_selectedIndex);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 160,
+            child: CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+                    _step(-1),
+                const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+                    _step(1),
+              },
+              child: TextField(
+                controller: _textController,
+                autofocus: true,
+                textAlign: TextAlign.center,
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: widget.inputHint,
+                  errorText: _invalid ? 'Unknown value' : null,
+                ),
+                onChanged: _onTextChanged,
+                onSubmitted: (_) => _submit(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TrainingValueWheelPicker(
+            items: widget.items,
+            controller: _wheelController,
+            onChanged: _onWheelChanged,
+          ),
+        ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuleren'),
+          child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop(selectedIndex),
+          onPressed: _invalid ? null : _submit,
           child: const Text('OK'),
         ),
       ],
-    ),
-  );
+    );
+  }
 }

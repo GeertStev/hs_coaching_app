@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/core/presentation/error_display.dart';
@@ -16,6 +18,9 @@ void main() async {
   installGlobalErrorHandlers(onUncaughtAsyncError: showUncaughtErrorSnackBar);
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final prefs = await SharedPreferences.getInstance();
+  // Op web toont de browser anders zijn eigen menu bij rechtsklik, over het
+  // contextmenu van de app heen (bv. op de Training-pills).
+  if (kIsWeb) await BrowserContextMenu.disableContextMenu();
   runApp(
     ProviderScope(
       retry: appProviderRetry,
@@ -42,4 +47,3 @@ class MainApp extends ConsumerWidget {
     );
   }
 }
-

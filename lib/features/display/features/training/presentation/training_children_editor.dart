@@ -19,7 +19,9 @@ const _probeGroupNode = TrainingNode.group(
   group: TrainingGroup(
     id: '_probe',
     children: [
-      TrainingNode.exercise(exercise: TrainingExercise(id: '_probe', title: '_probe')),
+      TrainingNode.exercise(
+        exercise: TrainingExercise(id: '_probe', title: '_probe'),
+      ),
     ],
   ),
 );
@@ -81,7 +83,7 @@ class TrainingChildrenEditor extends ConsumerWidget {
         .toList();
     final template = await showTrainingTemplatePicker(
       context,
-      title: 'Template openen',
+      title: 'Open template',
       templates: eligible,
     );
     if (template == null) return;
@@ -122,9 +124,9 @@ class TrainingChildrenEditor extends ConsumerWidget {
   void _showUndoSnackBar(BuildContext context, WidgetRef ref) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Gewijzigd'),
+        content: const Text('Changed'),
         action: SnackBarAction(
-          label: 'Ongedaan maken',
+          label: 'Undo',
           onPressed: () => ref.read(trainingCommandsProvider).undo(),
         ),
       ),
@@ -164,7 +166,7 @@ class TrainingChildrenEditor extends ConsumerWidget {
               TextButton.icon(
                 onPressed: _addExercise,
                 icon: const Icon(Icons.add),
-                label: const Text('Oefening'),
+                label: const Text('Exercise'),
               ),
               if (canAddGroup)
                 TextButton.icon(

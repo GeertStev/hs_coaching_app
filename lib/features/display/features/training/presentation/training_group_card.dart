@@ -42,7 +42,7 @@ class TrainingGroupCard extends ConsumerWidget {
   Future<void> _rename(BuildContext context) async {
     final title = await showTrainingTitleDialog(
       context,
-      title: '$_label hernoemen',
+      title: 'Rename $_label',
       initial: group.title ?? '',
     );
     if (title != null && title.isNotEmpty) {
@@ -59,8 +59,14 @@ class TrainingGroupCard extends ConsumerWidget {
     );
     final index = await showTrainingWheelPicker(
       context,
-      title: 'Herhalingen',
+      title: 'Repeat count',
       items: items,
+      parseInput: numericInputParser(
+        min: _kRepeatCountMin,
+        max: _kRepeatCountMax,
+        step: _kRepeatCountStep,
+      ),
+      inputHint: 'e.g. 4',
       initialIndex: numericWheelIndex(
         value: group.repeatCount,
         min: _kRepeatCountMin,
@@ -76,7 +82,7 @@ class TrainingGroupCard extends ConsumerWidget {
   Future<void> _saveAsTemplate(BuildContext context, WidgetRef ref) async {
     final details = await showTrainingTemplateDetailsDialog(
       context,
-      dialogTitle: 'Bewaar als template',
+      dialogTitle: 'Save as template',
       initialTitle: group.title ?? '',
       allTags: ref.read(trainingTemplateTagCountsProvider).keys.toList(),
     );
@@ -115,9 +121,9 @@ class TrainingGroupCard extends ConsumerWidget {
       case TrainingMutationApplied():
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Gewijzigd'),
+            content: const Text('Changed'),
             action: SnackBarAction(
-              label: 'Ongedaan maken',
+              label: 'Undo',
               onPressed: () => ref.read(trainingCommandsProvider).undo(),
             ),
           ),
@@ -171,7 +177,12 @@ class TrainingGroupCard extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const TrainingDragHandle(),
+                TrainingDragHandle(
+                  payload: TrainingDragPayload(path),
+                  label: group.title?.isNotEmpty == true
+                      ? group.title!
+                      : _label,
+                ),
                 const SizedBox(width: 4),
                 InkWell(
                   onTap: () => _editRepeatCount(context),
@@ -211,12 +222,12 @@ class TrainingGroupCard extends ConsumerWidget {
                     }
                   },
                   itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'rename', child: Text('Hernoemen')),
+                    PopupMenuItem(value: 'rename', child: Text('Rename')),
                     PopupMenuItem(
                       value: 'template',
-                      child: Text('Bewaren als template'),
+                      child: Text('Save as template'),
                     ),
-                    PopupMenuItem(value: 'delete', child: Text('Verwijderen')),
+                    PopupMenuItem(value: 'delete', child: Text('Delete')),
                   ],
                 ),
               ],
@@ -224,7 +235,8 @@ class TrainingGroupCard extends ConsumerWidget {
             TrainingChildrenEditor(
               children: group.children,
               parentPath: path,
-              onChanged: (updated) => onChanged(group.copyWith(children: updated)),
+              onChanged: (updated) =>
+                  onChanged(group.copyWith(children: updated)),
             ),
           ],
         ),
@@ -232,4 +244,3 @@ class TrainingGroupCard extends ConsumerWidget {
     );
   }
 }
-

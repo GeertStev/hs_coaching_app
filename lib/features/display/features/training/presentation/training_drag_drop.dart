@@ -9,25 +9,56 @@ class TrainingDragPayload {
   final TrainingPath path;
 }
 
-/// Kleine handle die visueel aangeeft dat een kaart sleepbaar is
-/// (long-press-drag, zoals Tabata's oude kaart-builder). Puur decoratief —
-/// de daadwerkelijke `LongPressDraggable`-wrapping gebeurt in de
-/// aanroepende kaartwidget zelf, omdat sleeplast en feedback-preview per
-/// kaarttype verschillen.
+/// Sleepgreep links op een kaart. Op de kaart zelf zit een
+/// `LongPressDraggable` (lang indrukken, handig op de tablet); deze greep
+/// is daarnaast zelf meteen sleepbaar, zonder wachten — zo verplaatst de
+/// muis een kaart met gewoon klikken-en-slepen. [payload] en [label] (tekst
+/// in de sleep-preview) horen bij de kaart; de volledige kaart als preview
+/// kan hier niet, die bevat deze greep zelf.
 class TrainingDragHandle extends StatelessWidget {
-  const TrainingDragHandle({super.key});
+  const TrainingDragHandle({
+    super.key,
+    required this.payload,
+    required this.label,
+  });
+
+  final TrainingDragPayload payload;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
-      Icons.drag_indicator,
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    final scheme = Theme.of(context).colorScheme;
+    final icon = Icon(Icons.drag_indicator, color: scheme.onSurfaceVariant);
+    return MouseRegion(
+      cursor: SystemMouseCursors.grab,
+      child: Draggable<TrainingDragPayload>(
+        data: payload,
+        dragAnchorStrategy: pointerDragAnchorStrategy,
+        feedback: Material(
+          elevation: 4,
+          borderRadius: BorderRadius.circular(8),
+          color: scheme.surfaceContainerHigh,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.drag_indicator, color: scheme.onSurfaceVariant),
+                const SizedBox(width: 4),
+                Text(label, style: Theme.of(context).textTheme.titleMedium),
+              ],
+            ),
+          ),
+        ),
+        childWhenDragging: Opacity(opacity: 0.3, child: icon),
+        child: icon,
+      ),
     );
   }
 }
 
 String _defaultRejectionMessage(String? reason) =>
-    reason ?? 'Deze plek kan dit niet bevatten.';
+    reason ?? 'This item cannot go here.';
 
 /// Dunne laat-hier-los-om-te-herordenen/verplaatsen strook tussen twee
 /// kaarten (of aan het begin/einde van een lijst). Licht accentkleurig op

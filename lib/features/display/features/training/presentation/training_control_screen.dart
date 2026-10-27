@@ -115,7 +115,7 @@ class _EditorTab extends ConsumerWidget {
 
 String _kindGroupLabel(TrainingTemplateKind kind) => switch (kind) {
   TrainingTemplateKind.group => 'Sets',
-  TrainingTemplateKind.exercise => 'Oefeningen',
+  TrainingTemplateKind.exercise => 'Exercises',
 };
 
 class _ListTab extends ConsumerWidget {
@@ -148,7 +148,7 @@ class _ListTab extends ConsumerWidget {
     return templatesAsync.when(
       data: (templates) {
         if (templates.isEmpty) {
-          return const Center(child: Text('Nog geen templates opgeslagen.'));
+          return const Center(child: Text('No templates saved yet.'));
         }
 
         final visible = templates
