@@ -27,7 +27,8 @@ class TrainingShapeException implements UserFacingException {
 /// base. Eén huidige training per display, in-place bewerkt (zelfde vorm
 /// als Tabata/Chrono's singleton-config) — geen aparte kaart-collectie, dus
 /// elke boom-mutatie (via `training_tree.dart`'s zuivere functies) schrijft
-/// de volledige boom in één keer terug, net als Tabata's `saveConfig`.
+/// de volledige boom (`children`) in één keer terug, net als Tabata's
+/// `saveConfig`; de runtime-velden schrijft alleen de live-sessie.
 class TrainingRepository extends DisplayTrainingRepository
     implements TagMaintenance {
   TrainingRepository({
@@ -43,7 +44,15 @@ class TrainingRepository extends DisplayTrainingRepository
         'saved.',
       );
     }
-    await trainingSettingsRef.set(training.toJson());
+    // Alleen `children`: de runtime-velden (status, pointer, klok) zijn van
+    // de live-tab. Een volledige `.set()` zou een (mogelijk verouderde)
+    // lokale kopie daarvan terugschrijven en zo een lopende sessie
+    // terugzetten. `merge: true` i.p.v. `.update()` zodat de eerste save ook
+    // werkt als het document nog niet bestaat; een lijst wordt bij merge in
+    // zijn geheel vervangen.
+    await trainingSettingsRef.set({
+      'children': training.toJson()['children'],
+    }, SetOptions(merge: true));
   }
 
   // ------------------------------------------------------- Live-sessie
