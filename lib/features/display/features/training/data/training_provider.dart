@@ -74,7 +74,13 @@ class TrainingCommands {
     final repository = ref.read(trainingRepositoryProvider);
     final notifier = ref.read(trainingNotifierProvider.notifier);
 
-    notifier.setOptimistic(training);
+    // Alleen de boom overnemen: de runtime-velden blijven die van de
+    // huidige state, net als in Firestore (zie `saveTraining`). Zo zet ook
+    // [undo] met een oudere snapshot een lopende sessie niet terug.
+    final current = ref.read(trainingNotifierProvider).value;
+    notifier.setOptimistic(
+      current?.copyWith(children: training.children) ?? training,
+    );
 
     try {
       await repository.saveTraining(training);
