@@ -105,6 +105,10 @@ class WheelItemScrollListener extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Listener(
+      // Opaque: het hele item-vlak telt, niet enkel de pixels van de tekst
+      // (een "–" is maar een paar pixels breed). Anders viel het wiel
+      // naast de tekst terug op scrollen per pixel: één klik = vele items.
+      behavior: HitTestBehavior.opaque,
       onPointerSignal: (event) {
         if (event is! PointerScrollEvent) return;
         final dy = event.scrollDelta.dy;

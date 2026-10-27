@@ -102,10 +102,14 @@ void main() {
 
   testWidgets('één muiswielklik draait precies één item', (tester) async {
     final results = await openPicker(tester);
-    final center = tester.getCenter(find.byType(ListWheelScrollView));
+    // Naast de tekst, niet erop: daar viel het wiel eerder terug op
+    // scrollen per pixel (één klik = meerdere items).
+    final center =
+        tester.getCenter(find.byType(ListWheelScrollView)) +
+        const Offset(-65, 0);
     final pointer = TestPointer(1, PointerDeviceKind.mouse);
     await tester.sendEventToBinding(pointer.hover(center));
-    await tester.sendEventToBinding(pointer.scroll(const Offset(0, 100)));
+    await tester.sendEventToBinding(pointer.scroll(const Offset(0, 300)));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, '5x'), findsOneWidget);
     await tester.tap(find.text('OK'));
