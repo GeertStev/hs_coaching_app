@@ -22,6 +22,7 @@ const _kStrokeValues = ['AB', 'A', 'B', 'D'];
 const _kZoneValues = ['Bov', 'Ond', 'HaBo', 'HaOn'];
 
 const _kRepsMin = 1, _kRepsMax = 50, _kRepsStep = 1;
+const _kRepeatCountMin = 1, _kRepeatCountMax = 20, _kRepeatCountStep = 1;
 const _kDistanceMin = 0, _kDistanceMax = 2000, _kDistanceStep = 25;
 const _kIntensityMin = 0, _kIntensityMax = 100, _kIntensityStep = 5;
 const _kSecondsMin = 0, _kSecondsMax = 900, _kSecondsStep = 5;
@@ -68,6 +69,37 @@ class TrainingExerciseCard extends ConsumerWidget {
     );
     if (title != null && title.isNotEmpty) {
       onChanged(exercise.copyWith(title: title));
+    }
+  }
+
+  /// Herhaalt de hele oefening (alle timing-rijen) — zelfde picker als
+  /// `TrainingGroupCard._editRepeatCount`, zie `TrainingExercise.repeatCount`.
+  Future<void> _editRepeatCount(BuildContext context) async {
+    final items = numericWheelItems(
+      min: _kRepeatCountMin,
+      max: _kRepeatCountMax,
+      step: _kRepeatCountStep,
+      format: (v) => '${v}x',
+    );
+    final index = await showTrainingWheelPicker(
+      context,
+      title: 'Repeat count',
+      items: items,
+      parseInput: numericInputParser(
+        min: _kRepeatCountMin,
+        max: _kRepeatCountMax,
+        step: _kRepeatCountStep,
+      ),
+      inputHint: 'e.g. 4',
+      initialIndex: numericWheelIndex(
+        value: exercise.repeatCount,
+        min: _kRepeatCountMin,
+        max: _kRepeatCountMax,
+        step: _kRepeatCountStep,
+      ),
+    );
+    if (index != null) {
+      onChanged(exercise.copyWith(repeatCount: _kRepeatCountMin + index));
     }
   }
 
@@ -135,6 +167,21 @@ class TrainingExerciseCard extends ConsumerWidget {
                   label: exercise.title,
                 ),
                 const SizedBox(width: 4),
+                InkWell(
+                  onTap: () => _editRepeatCount(context),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.repeat,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Text('${exercise.repeatCount}x'),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: InkWell(
                     onTap: () => _rename(context),
