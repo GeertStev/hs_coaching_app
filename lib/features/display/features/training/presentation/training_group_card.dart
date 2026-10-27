@@ -11,9 +11,7 @@ import 'package:hs_coaching_app/features/display/features/training/presentation/
 import 'package:hs_coaching_app/features/display/features/training/presentation/training_dialogs.dart';
 import 'package:hs_coaching_app/features/display/features/training/presentation/training_drag_drop.dart';
 import 'package:hs_coaching_app/features/display/features/training/presentation/training_mutations.dart';
-import 'package:hs_coaching_app/features/display/features/training/presentation/training_value_wheel_picker.dart';
-
-const _kRepeatCountMin = 1, _kRepeatCountMax = 20, _kRepeatCountStep = 1;
+import 'package:hs_coaching_app/features/display/features/training/presentation/training_value_pill.dart';
 
 /// "Set" en "Subset" zijn positionele UI-labels van hetzelfde
 /// [TrainingGroup]-type (zie `training_node.dart`) — dit is het enige
@@ -47,35 +45,6 @@ class TrainingGroupCard extends ConsumerWidget {
     );
     if (title != null && title.isNotEmpty) {
       onChanged(group.copyWith(title: title));
-    }
-  }
-
-  Future<void> _editRepeatCount(BuildContext context) async {
-    final items = numericWheelItems(
-      min: _kRepeatCountMin,
-      max: _kRepeatCountMax,
-      step: _kRepeatCountStep,
-      format: (v) => '${v}x',
-    );
-    final index = await showTrainingWheelPicker(
-      context,
-      title: 'Repeat count',
-      items: items,
-      parseInput: numericInputParser(
-        min: _kRepeatCountMin,
-        max: _kRepeatCountMax,
-        step: _kRepeatCountStep,
-      ),
-      inputHint: 'e.g. 4',
-      initialIndex: numericWheelIndex(
-        value: group.repeatCount,
-        min: _kRepeatCountMin,
-        max: _kRepeatCountMax,
-        step: _kRepeatCountStep,
-      ),
-    );
-    if (index != null) {
-      onChanged(group.copyWith(repeatCount: _kRepeatCountMin + index));
     }
   }
 
@@ -184,19 +153,9 @@ class TrainingGroupCard extends ConsumerWidget {
                       : _label,
                 ),
                 const SizedBox(width: 4),
-                InkWell(
-                  onTap: () => _editRepeatCount(context),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.repeat,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 4),
-                      Text('${group.repeatCount}x'),
-                    ],
-                  ),
+                TrainingRepeatCountPill(
+                  value: group.repeatCount,
+                  onChanged: (v) => onChanged(group.copyWith(repeatCount: v)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
