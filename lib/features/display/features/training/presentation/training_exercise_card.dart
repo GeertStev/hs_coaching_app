@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_core/training/training_exercise.dart';
 import 'package:hs_coaching_core/training/training_exercise_group.dart';
@@ -60,7 +63,7 @@ class TrainingExerciseCard extends ConsumerWidget {
   Future<void> _rename(BuildContext context) async {
     final title = await showTrainingTitleDialog(
       context,
-      title: 'Oefening hernoemen',
+      title: 'Rename exercise',
       initial: exercise.title,
     );
     if (title != null && title.isNotEmpty) {
@@ -71,7 +74,7 @@ class TrainingExerciseCard extends ConsumerWidget {
   Future<void> _saveAsTemplate(BuildContext context, WidgetRef ref) async {
     final details = await showTrainingTemplateDetailsDialog(
       context,
-      dialogTitle: 'Bewaar als template',
+      dialogTitle: 'Save as template',
       initialTitle: exercise.title,
       allTags: ref.read(trainingTemplateTagCountsProvider).keys.toList(),
     );
@@ -127,7 +130,10 @@ class TrainingExerciseCard extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const TrainingDragHandle(),
+                TrainingDragHandle(
+                  payload: TrainingDragPayload(path),
+                  label: exercise.title,
+                ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: InkWell(
@@ -156,20 +162,14 @@ class TrainingExerciseCard extends ConsumerWidget {
                       value: 'addGroup',
                       enabled:
                           exercise.groups.length < kMaxTrainingExerciseGroups,
-                      child: const Text('Groep toevoegen'),
+                      child: const Text('Add group'),
                     ),
-                    const PopupMenuItem(
-                      value: 'rename',
-                      child: Text('Hernoemen'),
-                    ),
+                    const PopupMenuItem(value: 'rename', child: Text('Rename')),
                     const PopupMenuItem(
                       value: 'template',
-                      child: Text('Bewaren als template'),
+                      child: Text('Save as template'),
                     ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Verwijderen'),
-                    ),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
                   ],
                 ),
               ],
@@ -226,9 +226,9 @@ class TrainingExerciseCard extends ConsumerWidget {
       case TrainingMutationApplied():
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Gewijzigd'),
+            content: const Text('Changed'),
             action: SnackBarAction(
-              label: 'Ongedaan maken',
+              label: 'Undo',
               onPressed: () => ref.read(trainingCommandsProvider).undo(),
             ),
           ),
@@ -274,7 +274,7 @@ class _GroupPanel extends StatelessWidget {
                     child: TextFormField(
                       initialValue: group.name,
                       decoration: const InputDecoration(
-                        labelText: 'Groepsnaam',
+                        labelText: 'Group name',
                         isDense: true,
                       ),
                       onChanged: (value) =>
@@ -285,7 +285,7 @@ class _GroupPanel extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: onRemove,
-                      tooltip: 'Groep verwijderen',
+                      tooltip: 'Remove group',
                     ),
                 ],
               ),
@@ -315,6 +315,14 @@ class _GroupPanel extends StatelessWidget {
             children: [
               _ValuePill(
                 label: 'Work',
+                title: 'Work time',
+                parseInput: numericInputParser(
+                  min: _kSecondsMin,
+                  max: _kSecondsMax,
+                  step: _kSecondsStep,
+                  parseValue: parseSecondsInput,
+                ),
+                inputHint: 'e.g. 45 or 1:30',
                 items: numericWheelItems(
                   min: _kSecondsMin,
                   max: _kSecondsMax,
@@ -336,6 +344,14 @@ class _GroupPanel extends StatelessWidget {
               ),
               _ValuePill(
                 label: 'Rest',
+                title: 'Rest time',
+                parseInput: numericInputParser(
+                  min: _kSecondsMin,
+                  max: _kSecondsMax,
+                  step: _kSecondsStep,
+                  parseValue: parseSecondsInput,
+                ),
+                inputHint: 'e.g. 45 or 1:30',
                 items: numericWheelItems(
                   min: _kSecondsMin,
                   max: _kSecondsMax,
@@ -357,6 +373,13 @@ class _GroupPanel extends StatelessWidget {
               ),
               _ValuePill(
                 label: 'Delta',
+                title: 'Delta per round',
+                parseInput: numericInputParser(
+                  min: _kDeltaMin,
+                  max: _kDeltaMax,
+                  step: _kDeltaStep,
+                ),
+                inputHint: 'seconds, e.g. -5 or 10',
                 items: numericWheelItems(
                   min: _kDeltaMin,
                   max: _kDeltaMax,
@@ -421,6 +444,14 @@ class _ParameterRowPills extends StatelessWidget {
       runSpacing: 8,
       children: [
         _ValuePill(
+          title: 'Reps',
+          parseInput: numericInputParser(
+            min: _kRepsMin,
+            max: _kRepsMax,
+            step: _kRepsStep,
+            nullable: true,
+          ),
+          inputHint: 'e.g. 10',
           items: [
             '–',
             ...numericWheelItems(
@@ -448,6 +479,14 @@ class _ParameterRowPills extends StatelessWidget {
           onLongPress: onRemove,
         ),
         _ValuePill(
+          title: 'Distance',
+          parseInput: numericInputParser(
+            min: _kDistanceMin,
+            max: _kDistanceMax,
+            step: _kDistanceStep,
+            nullable: true,
+          ),
+          inputHint: 'meters, e.g. 400',
           items: [
             '–',
             ...numericWheelItems(
@@ -477,6 +516,8 @@ class _ParameterRowPills extends StatelessWidget {
           onLongPress: onRemove,
         ),
         _ValuePill(
+          title: 'Stroke',
+          inputHint: _kStrokeValues.join(' / '),
           items: ['–', ..._kStrokeValues],
           initialIndex: () {
             final idx = _kStrokeValues.indexOf(row.stroke ?? '');
@@ -489,6 +530,14 @@ class _ParameterRowPills extends StatelessWidget {
           onLongPress: onRemove,
         ),
         _ValuePill(
+          title: 'Intensity',
+          parseInput: numericInputParser(
+            min: _kIntensityMin,
+            max: _kIntensityMax,
+            step: _kIntensityStep,
+            nullable: true,
+          ),
+          inputHint: 'percent, e.g. 80',
           items: [
             '–',
             ...numericWheelItems(
@@ -518,6 +567,8 @@ class _ParameterRowPills extends StatelessWidget {
           onLongPress: onRemove,
         ),
         _ValuePill(
+          title: 'Zone',
+          inputHint: _kZoneValues.join(' / '),
           items: ['–', ..._kZoneValues],
           initialIndex: () {
             final idx = _kZoneValues.indexOf(row.zone ?? '');
@@ -535,28 +586,38 @@ class _ParameterRowPills extends StatelessWidget {
 }
 
 /// Rechtstreeks draaibare waarde-pill, zelfde stijl als Tabata's `_Pill`
-/// (gekleurde vulling + rand + tekst) maar nu zelf een compacte
-/// [ListWheelScrollView] — geen tik-om-een-menu-te-openen meer: verticaal
-/// binnen de pill slepen/vegen wijzigt [items]`[index]` rechtstreeks, met
-/// snap-physics per stap ([FixedExtentScrollPhysics]). De pillbreedte wordt
-/// vastgeklikt op de breedste tekst in [items] zodat ze niet meebeweegt
-/// tijdens het scrollen. [onLongPress] blijft werken naast het sleepgebaar
-/// (aparte gesture-recognizers, arena bepaalt wie wint op basis van
-/// beweging).
+/// (gekleurde vulling + rand + tekst) maar zelf een compacte
+/// [ListWheelScrollView]: verticaal binnen de pill slepen/vegen (touch én
+/// muis) wijzigt [items]`[index]` rechtstreeks, met snap-physics per stap
+/// ([FixedExtentScrollPhysics]). De pillbreedte wordt vastgeklikt op de
+/// breedste tekst in [items] zodat ze niet meebeweegt tijdens het scrollen.
+///
+/// Voor muis en toetsenbord: het muiswiel draait per item, tikken/klikken
+/// opent [showTrainingWheelPicker] om de waarde te typen ([parseInput]),
+/// met de focus op de pill kiezen ↑/↓ het vorige/volgende item en opent
+/// Enter/spatie het invulveld. [onLongPress] (rij verwijderen) zit ook
+/// onder rechtsklik.
 class _ValuePill extends StatefulWidget {
   const _ValuePill({
+    required this.title,
     required this.items,
     required this.initialIndex,
     required this.color,
     required this.onChanged,
+    this.parseInput,
+    this.inputHint,
     this.onLongPress,
     this.label,
   });
 
+  /// Titel van het invuldialoog (bv. "Distance").
+  final String title;
   final List<String> items;
   final int initialIndex;
   final Color color;
   final ValueChanged<int> onChanged;
+  final WheelInputParser? parseInput;
+  final String? inputHint;
   final VoidCallback? onLongPress;
 
   /// Klein bijschrift boven de pill (bv. "Work"), zodat de drie
@@ -594,9 +655,21 @@ class _ValuePillState extends State<_ValuePill> {
     return max + 20;
   }
 
+  // Muiswiel/pijltjes: wachten met vastleggen tot er even niet meer
+  // gedraaid wordt, zodat tien snelle wielklikken één rebuild + één write
+  // geven i.p.v. tien (zelfde reden als de ScrollEndNotification hieronder).
+  static const _commitDelay = Duration(milliseconds: 400);
+
   late int _selectedIndex = widget.initialIndex;
   late final FixedExtentScrollController _controller =
       FixedExtentScrollController(initialItem: widget.initialIndex);
+  final _focusNode = FocusNode();
+  final _stepper = WheelScrollStepper();
+  bool _focused = false;
+  Timer? _commitTimer;
+  // Waar tijdens een programmatische jumpToItem: die stuurt ook een
+  // ScrollEndNotification, die mag niet meteen vastleggen.
+  bool _jumping = false;
 
   @override
   void didUpdateWidget(_ValuePill oldWidget) {
@@ -606,60 +679,170 @@ class _ValuePillState extends State<_ValuePill> {
     if (widget.initialIndex != _selectedIndex &&
         widget.initialIndex != oldWidget.initialIndex) {
       _selectedIndex = widget.initialIndex;
-      _controller.jumpToItem(widget.initialIndex);
+      _jumpTo(widget.initialIndex);
     }
   }
 
   @override
   void dispose() {
+    _commitTimer?.cancel();
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
 
+  void _jumpTo(int index) {
+    _jumping = true;
+    _controller.jumpToItem(index);
+    _jumping = false;
+  }
+
+  bool _canStep(int direction) {
+    final target = _selectedIndex + direction;
+    return target >= 0 && target < widget.items.length;
+  }
+
+  void _step(int delta) {
+    final target = (_selectedIndex + delta).clamp(0, widget.items.length - 1);
+    if (target == _selectedIndex) return;
+    _jumpTo(target);
+    _selectedIndex = target;
+    _commitTimer?.cancel();
+    _commitTimer = Timer(_commitDelay, () => widget.onChanged(_selectedIndex));
+  }
+
+  Future<void> _openInput() async {
+    _focusNode.requestFocus();
+    final index = await showTrainingWheelPicker(
+      context,
+      title: widget.title,
+      items: widget.items,
+      initialIndex: _selectedIndex,
+      parseInput: widget.parseInput,
+      inputHint: widget.inputHint,
+    );
+    if (index == null || !mounted) return;
+    _commitTimer?.cancel();
+    if (index != _selectedIndex) _jumpTo(index);
+    widget.onChanged(index);
+  }
+
+  Future<void> _showContextMenu(Offset position) async {
+    final overlay =
+        Overlay.of(context).context.findRenderObject()! as RenderBox;
+    final action = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        position & Size.zero,
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        const PopupMenuItem(value: 'edit', child: Text('Edit value')),
+        if (widget.onLongPress != null)
+          const PopupMenuItem(value: 'remove', child: Text('Remove row')),
+      ],
+    );
+    if (!mounted) return;
+    switch (action) {
+      case 'edit':
+        _openInput();
+      case 'remove':
+        widget.onLongPress?.call();
+    }
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowDown) {
+      _step(1);
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      _step(-1);
+    } else if (event is KeyDownEvent &&
+        (key == LogicalKeyboardKey.enter ||
+            key == LogicalKeyboardKey.numpadEnter ||
+            key == LogicalKeyboardKey.space)) {
+      _openInput();
+    } else {
+      return KeyEventResult.ignored;
+    }
+    return KeyEventResult.handled;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final pill = Material(
-      color: widget.color.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: _width,
-        height: _itemExtent,
-        decoration: BoxDecoration(
+    final pill = Focus(
+      focusNode: _focusNode,
+      onKeyEvent: _onKey,
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Material(
+          color: widget.color.withValues(alpha: _focused ? 0.24 : 0.12),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: widget.color, width: 1.5),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(6.5),
-          child: GestureDetector(
-            onLongPress: widget.onLongPress,
-            // ScrollEndNotification i.p.v. rechtstreeks in
-            // onSelectedItemChanged: dat laatste vuurt bij élke tussenliggende
-            // index tijdens een sleep/fling-gebaar. widget.onChanged loopt
-            // via copyWith helemaal terug naar de root van de trainingsboom,
-            // wat een rebuild van de hele kaartenlijst triggert — bij een
-            // fling door bv. 20 items dus 20 volle rebuilds. Lokaal
-            // (setState) blijft de tekst wel live meebewegen tijdens het
-            // slepen; enkel het "vastklikken" van de waarde wacht tot het
-            // wiel tot rust komt.
-            child: NotificationListener<ScrollEndNotification>(
-              onNotification: (notification) {
-                widget.onChanged(_selectedIndex);
-                return false;
-              },
-              child: ListWheelScrollView.useDelegate(
-                controller: _controller,
-                itemExtent: _itemExtent,
-                diameterRatio: 1.8,
-                perspective: 0.003,
-                physics: const FixedExtentScrollPhysics(),
-                onSelectedItemChanged: (index) =>
-                    setState(() => _selectedIndex = index),
-                childDelegate: ListWheelChildBuilderDelegate(
-                  childCount: widget.items.length,
-                  builder: (context, index) => Center(
-                    child: Text(
-                      widget.items[index],
-                      style: _kValuePillTextStyle.copyWith(color: widget.color),
+          child: Container(
+            width: _width,
+            height: _itemExtent,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: widget.color,
+                width: _focused ? 2.5 : 1.5,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6.5),
+              child: GestureDetector(
+                onTap: _openInput,
+                onLongPress: widget.onLongPress,
+                onSecondaryTapUp: (details) =>
+                    _showContextMenu(details.globalPosition),
+                // ScrollEndNotification i.p.v. rechtstreeks in
+                // onSelectedItemChanged: dat laatste vuurt bij élke
+                // tussenliggende index tijdens een sleep/fling-gebaar.
+                // widget.onChanged loopt via copyWith helemaal terug naar de
+                // root van de trainingsboom, wat een rebuild van de hele
+                // kaartenlijst triggert — bij een fling door bv. 20 items
+                // dus 20 volle rebuilds. Lokaal (setState) blijft de tekst
+                // wel live meebewegen tijdens het slepen; enkel het
+                // "vastklikken" van de waarde wacht tot het wiel tot rust
+                // komt.
+                child: NotificationListener<ScrollEndNotification>(
+                  onNotification: (notification) {
+                    if (!_jumping) {
+                      _commitTimer?.cancel();
+                      widget.onChanged(_selectedIndex);
+                    }
+                    return false;
+                  },
+                  child: mouseDraggableWheel(
+                    context,
+                    ListWheelScrollView.useDelegate(
+                      controller: _controller,
+                      itemExtent: _itemExtent,
+                      diameterRatio: 1.8,
+                      perspective: 0.003,
+                      physics: const FixedExtentScrollPhysics(),
+                      onSelectedItemChanged: (index) =>
+                          setState(() => _selectedIndex = index),
+                      childDelegate: ListWheelChildBuilderDelegate(
+                        childCount: widget.items.length,
+                        builder: (context, index) => WheelItemScrollListener(
+                          stepper: _stepper,
+                          canStep: _canStep,
+                          onStep: _step,
+                          child: Center(
+                            child: Text(
+                              widget.items[index],
+                              style: _kValuePillTextStyle.copyWith(
+                                color: widget.color,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),

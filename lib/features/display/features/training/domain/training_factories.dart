@@ -26,7 +26,7 @@ TrainingExerciseGroup newTrainingExerciseGroup() {
   );
 }
 
-TrainingExercise newTrainingExercise({String title = 'Nieuwe oefening'}) {
+TrainingExercise newTrainingExercise({String title = 'New exercise'}) {
   return TrainingExercise(
     id: _uuid.v4(),
     title: title,
@@ -41,7 +41,7 @@ TrainingExercise newTrainingExercise({String title = 'Nieuwe oefening'}) {
 /// ingevoegd mogen worden (hoogte 1, net als een oefening) maar daarna
 /// nooit meer een kind kunnen krijgen op diepte 3 — dat vermijden we hier
 /// in de praktijk in plaats van de formule zelf uit te zonderen.
-TrainingGroup newTrainingGroup({String title = 'Nieuwe groep'}) {
+TrainingGroup newTrainingGroup({String title = 'New set'}) {
   return TrainingGroup(
     id: _uuid.v4(),
     title: title,
