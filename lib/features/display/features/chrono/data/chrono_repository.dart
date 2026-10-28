@@ -48,9 +48,16 @@ class DisplayChronoRepository extends core.DisplayChronoRepository {
 
   /// arrayUnion i.p.v. de hele lijst herschrijven: twee baanknoppen vlak na
   /// elkaar mogen elkaars tijd niet overschrijven.
-  Future<void> addLap(ChronoLap lap) async {
+  ///
+  /// Met [finish] (de laatste finale tijd, zie `isChronoFinished`) pauzeert
+  /// de chrono in dezelfde schrijfactie, precies op de tijd van die lap.
+  Future<void> addLap(ChronoLap lap, {bool finish = false}) async {
     await chronoSettingsRef.update({
       'lapTimes': FieldValue.arrayUnion([lap.toJson()]),
+      if (finish) ...{
+        'status': ChronoStatus.paused.name,
+        'accumulatedElapsedMillis': lap.elapsedMillis,
+      },
     });
   }
 
