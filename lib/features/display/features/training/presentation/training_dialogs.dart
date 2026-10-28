@@ -43,6 +43,8 @@ class _TitleDialogState extends State<_TitleDialog> {
     super.dispose();
   }
 
+  void _submit() => Navigator.of(context).pop(_controller.text.trim());
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -52,19 +54,35 @@ class _TitleDialogState extends State<_TitleDialog> {
         autofocus: true,
         textCapitalization: TextCapitalization.sentences,
         decoration: const InputDecoration(labelText: 'Title'),
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _submit(),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
-          child: const Text('Save'),
-        ),
+        FilledButton(onPressed: _submit, child: const Text('Save')),
       ],
     );
   }
+}
+
+/// "Changed — Undo"-melding na een wijziging in de trainingsboom. Een
+/// SnackBar met actie blijft standaard staan tot erop getikt wordt; deze
+/// verdwijnt na 4 s vanzelf.
+void showTrainingUndoSnackBar(
+  BuildContext context, {
+  required VoidCallback onUndo,
+}) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: const Text('Changed'),
+      duration: const Duration(seconds: 4),
+      persist: false,
+      action: SnackBarAction(label: 'Undo', onPressed: onUndo),
+    ),
+  );
 }
 
 /// Toont een keuzelijst van opgeslagen templates (al gefilterd op het
@@ -218,6 +236,8 @@ class _TemplateDetailsDialogState extends State<_TemplateDetailsDialog> {
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(labelText: 'Title'),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 16),
             ReusableTagEditor(

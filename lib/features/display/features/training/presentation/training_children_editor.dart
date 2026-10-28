@@ -115,21 +115,15 @@ class TrainingChildrenEditor extends ConsumerWidget {
       case TrainingMutationApplied():
         _showUndoSnackBar(context, ref);
       case TrainingMutationRejected(:final reason):
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(reason)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(reason)));
     }
   }
 
   void _showUndoSnackBar(BuildContext context, WidgetRef ref) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Changed'),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () => ref.read(trainingCommandsProvider).undo(),
-        ),
-      ),
+    showTrainingUndoSnackBar(
+      context,
+      onUndo: () => ref.read(trainingCommandsProvider).undo(),
     );
   }
 
