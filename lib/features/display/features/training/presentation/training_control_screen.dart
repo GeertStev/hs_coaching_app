@@ -428,68 +428,150 @@ class _StepView extends StatelessWidget {
         : colorScheme.primary;
     final remainingSeconds = progress.remainingSeconds;
 
+    // Scrollbaar: een group split toont twee timers onder elkaar.
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          for (final repeat in step.repeats)
-            Text(
-              '${repeat.groupTitle ?? "Set"} ${repeat.iteration}/${repeat.repeatCount}',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          const SizedBox(height: 8),
-          Text(
-            'Step ${step.siblingIndex + 1}/${step.siblingCount}',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            step.exerciseTitle,
-            style: Theme.of(context).textTheme.headlineSmall,
-            textAlign: TextAlign.center,
-          ),
-          if (step.groupName.isNotEmpty)
-            Text(step.groupName, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 8),
-          Text(
-            progress.status == TrainingStatus.paused
-                ? 'Paused'
-                : step.phase == TrainingStepPhase.rest
-                ? 'Rest'
-                : 'Work',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: progress.status == TrainingStatus.paused
-                  ? colorScheme.outline
-                  : phaseColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (remainingSeconds != null)
-            Text(
-              _formatSeconds(remainingSeconds),
-              style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                fontFamily: 'monospace',
-                fontWeight: FontWeight.bold,
-                color: phaseColor,
-              ),
-            )
-          else
-            Text(
-              'Waiting for coach',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(color: colorScheme.outline),
-            ),
-          const SizedBox(height: 16),
-          for (final row in step.parameterRows)
-            if (_formatParameterRow(row).isNotEmpty)
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final repeat in step.repeats)
               Text(
-                _formatParameterRow(row),
-                style: Theme.of(context).textTheme.bodyLarge,
+                '${repeat.groupTitle ?? "Set"} ${repeat.iteration}/${repeat.repeatCount}',
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              'Step ${step.siblingIndex + 1}/${step.siblingCount}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              step.exerciseTitle,
+              style: Theme.of(context).textTheme.headlineSmall,
+              textAlign: TextAlign.center,
+            ),
+            if (step.isGroupSplit)
+              ..._groupSplit(context)
+            else ...[
+              if (step.groupName.isNotEmpty)
+                Text(
+                  step.groupName,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              const SizedBox(height: 8),
+              Text(
+                progress.status == TrainingStatus.paused
+                    ? 'Paused'
+                    : step.phase == TrainingStepPhase.rest
+                    ? 'Rest'
+                    : 'Work',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: progress.status == TrainingStatus.paused
+                      ? colorScheme.outline
+                      : phaseColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (remainingSeconds != null)
+                Text(
+                  _formatSeconds(remainingSeconds),
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                    color: phaseColor,
+                  ),
+                )
+              else
+                Text(
+                  'Waiting for coach',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(color: colorScheme.outline),
+                ),
+              const SizedBox(height: 16),
+              for (final row in step.parameterRows)
+                if (_formatParameterRow(row).isNotEmpty)
+                  Text(
+                    _formatParameterRow(row),
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+            ],
+          ],
+        ),
       ),
     );
+  }
+
+  /// Group split: de groepen lopen tegelijk, elk met eigen fase en timer —
+  /// zie `parallelGroupStatesAt` in core.
+  List<Widget> _groupSplit(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final isPaused = progress.status == TrainingStatus.paused;
+    final duration = step.durationMillis;
+    final remaining = progress.remaining?.inMilliseconds;
+    final elapsed = duration == null || remaining == null
+        ? 0
+        : duration - remaining;
+    final states = parallelGroupStatesAt(step, elapsed);
+
+    return [
+      const SizedBox(height: 8),
+      for (var i = 0; i < step.parallelGroups.length; i++)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Builder(
+            builder: (context) {
+              final group = step.parallelGroups[i];
+              final state = states[i];
+              final phaseColor = isPaused
+                  ? colorScheme.outline
+                  : state.phase == TrainingStepPhase.rest
+                  ? colorScheme.tertiary
+                  : colorScheme.primary;
+              final remainingMillis = state.remainingMillis;
+              return Column(
+                children: [
+                  Text(
+                    [
+                      if (group.name.isNotEmpty) group.name,
+                      isPaused
+                          ? 'Paused'
+                          : state.phase == TrainingStepPhase.rest
+                          ? 'Rest'
+                          : 'Work',
+                    ].join(' · '),
+                    style: textTheme.titleMedium?.copyWith(
+                      color: phaseColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    remainingMillis == null
+                        ? 'Waiting for coach'
+                        : _formatSeconds((remainingMillis / 1000).ceil()),
+                    style: remainingMillis == null
+                        ? textTheme.titleLarge?.copyWith(
+                            color: colorScheme.outline,
+                          )
+                        : textTheme.displaySmall?.copyWith(
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                            color: phaseColor,
+                          ),
+                  ),
+                  for (final row in group.parameterRows)
+                    if (_formatParameterRow(row).isNotEmpty)
+                      Text(
+                        _formatParameterRow(row),
+                        style: textTheme.bodyLarge,
+                      ),
+                ],
+              );
+            },
+          ),
+        ),
+    ];
   }
 }
