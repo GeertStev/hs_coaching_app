@@ -94,7 +94,8 @@ class ChronoCommands {
   /// Neemt een tijd op: [lane] null voor de Lap-knop, anders het baannummer
   /// van een baanknop. Doet niets als de chrono niet loopt of nog aftelt, als
   /// die baan zijn maximum laps heeft, of bij een dubbele druk op dezelfde
-  /// baan (zie `isLapAccepted`).
+  /// baan (zie `isLapAccepted`). Is dit de laatste finale tijd (zie
+  /// `isChronoFinished`), dan pauzeert de chrono op die tijd.
   Future<void> recordLap({int? lane}) async {
     // Tijd op het moment van de druk, niet die van de laatste schermtik.
     final nowServerMillis = _nowServerMillis;
@@ -106,12 +107,18 @@ class ChronoCommands {
     if (!isLapAccepted(current, lane, elapsedMillis)) return;
 
     final lap = ChronoLap(elapsedMillis: elapsedMillis, lane: lane);
-    ref
-        .read(chronoNotifierProvider.notifier)
-        .setOptimistic(current.copyWith(lapTimes: [...current.lapTimes, lap]));
+    var updated = current.copyWith(lapTimes: [...current.lapTimes, lap]);
+    final finish = isChronoFinished(updated);
+    if (finish) {
+      updated = updated.copyWith(
+        status: ChronoStatus.paused,
+        accumulatedElapsedMillis: elapsedMillis,
+      );
+    }
+    ref.read(chronoNotifierProvider.notifier).setOptimistic(updated);
 
     try {
-      await ref.read(chronoRepositoryProvider).addLap(lap);
+      await ref.read(chronoRepositoryProvider).addLap(lap, finish: finish);
     } catch (e) {
       ref.invalidate(chronoNotifierProvider);
       rethrow;
