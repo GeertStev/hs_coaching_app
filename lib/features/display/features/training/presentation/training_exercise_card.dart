@@ -20,7 +20,8 @@ const _kStrokeValues = ['AB', 'A', 'B', 'D'];
 const _kZoneValues = ['Bov', 'Ond', 'HaBo', 'HaOn'];
 
 const _kRepsMin = 1, _kRepsMax = 50, _kRepsStep = 1;
-const _kDistanceMin = 0, _kDistanceMax = 2000, _kDistanceStep = 25;
+// Afstand begint bij 25 m (één baan); 0 m bestaat niet meer als keuze.
+const _kDistanceMin = 25, _kDistanceMax = 2000, _kDistanceStep = 25;
 const _kIntensityMin = 0, _kIntensityMax = 100, _kIntensityStep = 5;
 // Werk/rust: per seconde tot 2:00, daarboven per 5 s (tot 15:00).
 final _kSecondsValues = secondsWheelValues();

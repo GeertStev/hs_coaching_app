@@ -11,14 +11,17 @@ import 'package:uuid/uuid.dart';
 /// nooit nieuwe kaarten aan te maken (alleen te lezen).
 const _uuid = Uuid();
 
+/// Afstand van een nieuwe lijn: één baan.
+const kDefaultLineDistance = 25;
+
 TrainingParameterRow newTrainingParameterRow() {
-  return TrainingParameterRow(id: _uuid.v4());
+  return TrainingParameterRow(id: _uuid.v4(), distance: kDefaultLineDistance);
 }
 
 /// Een oefening heeft altijd minstens 1 parameter-rij (zie
 /// `training_exercise_card.dart`'s `_ParameterRowPills` — de laatste rij kan
-/// niet weggehaald worden), dus start hier al met één (lege) rij in plaats
-/// van een lege lijst.
+/// niet weggehaald worden), dus start hier al met één rij in plaats
+/// van een lege lijst (enkel de afstand ingevuld).
 TrainingExerciseGroup newTrainingExerciseGroup() {
   return TrainingExerciseGroup(
     id: _uuid.v4(),
