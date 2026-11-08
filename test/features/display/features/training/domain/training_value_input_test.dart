@@ -89,4 +89,34 @@ void main() {
       expect(listInputParser(['A', 'B'])(''), isNull);
     });
   });
+
+  group('werk/rust per seconde', () {
+    final values = secondsWheelValues();
+
+    test('per seconde tot 2:00, daarboven per 5 s tot 15:00', () {
+      expect(values.take(3), [0, 1, 2]);
+      expect(values, contains(27));
+      expect(values, contains(119));
+      expect(values, isNot(contains(121)));
+      expect(values, containsAllInOrder([120, 125, 130]));
+      expect(values.last, 900);
+    });
+
+    test('"27", "0:27" en "00:27" geven 27 s', () {
+      final parse = valueListInputParser(values, parseValue: parseSecondsInput);
+      for (final text in ['27', '0:27', '00:27', '27s']) {
+        expect(values[parse(text)!], 27, reason: text);
+      }
+      expect(values[parse('1:30')!], 90);
+      expect(values[parse('2:03')!], 125);
+      expect(values[parse('99:00')!], 900);
+      expect(parse('abc'), isNull);
+    });
+
+    test('nearestValueIndex voor een bestaande waarde', () {
+      expect(values[nearestValueIndex(values, 45)], 45);
+      expect(values[nearestValueIndex(values, 122)], 120);
+      expect(values[nearestValueIndex(values, -3)], 0);
+    });
+  });
 }

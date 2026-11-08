@@ -15,6 +15,7 @@ import 'package:hs_coaching_app/features/display/features/training/data/training
 import 'package:hs_coaching_app/features/display/features/training/domain/training_template.dart';
 import 'package:hs_coaching_app/features/display/features/training/presentation/training_children_editor.dart';
 import 'package:hs_coaching_app/features/display/features/training/presentation/training_dialogs.dart';
+import 'package:hs_coaching_app/features/display/features/training/presentation/training_drag_drop.dart';
 import 'package:hs_coaching_app/features/display/features/training/presentation/training_screen_controller.dart';
 import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
@@ -92,19 +93,23 @@ class _EditorTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 32),
-      children: [
-        TrainingChildrenEditor(
-          children: training.children,
-          parentPath: const [],
-          onChanged: (updated) {
-            ref
-                .read(trainingCommandsProvider)
-                .save(training.copyWith(children: updated));
-          },
-        ),
-      ],
+    // Een kaart tegen de boven- of onderrand slepen scrolt de lijst mee.
+    return TrainingDragAutoScroll(
+      builder: (context, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 32),
+        children: [
+          TrainingChildrenEditor(
+            children: training.children,
+            parentPath: const [],
+            onChanged: (updated) {
+              ref
+                  .read(trainingCommandsProvider)
+                  .save(training.copyWith(children: updated));
+            },
+          ),
+        ],
+      ),
     );
   }
 }
