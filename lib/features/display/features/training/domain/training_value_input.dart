@@ -67,3 +67,37 @@ WheelInputParser listInputParser(List<String> items) {
     return index < 0 ? null : index;
   };
 }
+
+/// Waarden van het werk-/rustwiel: per seconde tot [perSecondUntil]
+/// (00:27 kan dus), daarboven per [coarseStep] s tot [max], zodat het wiel
+/// voor lange tijden niet honderden stappen nodig heeft.
+List<int> secondsWheelValues({
+  int max = 900,
+  int perSecondUntil = 120,
+  int coarseStep = 5,
+}) => [
+  for (var v = 0; v <= perSecondUntil && v <= max; v++) v,
+  for (var v = perSecondUntil + coarseStep; v <= max; v += coarseStep) v,
+];
+
+/// Index van de waarde in [values] (oplopend) die het dichtst bij [value]
+/// ligt; bij gelijke afstand de grootste.
+int nearestValueIndex(List<int> values, int value) {
+  var best = 0;
+  for (var i = 1; i < values.length; i++) {
+    if ((values[i] - value).abs() <= (values[best] - value).abs()) best = i;
+  }
+  return best;
+}
+
+/// Parser voor een wiel met een vaste lijst getallen [values] (bv.
+/// [secondsWheelValues]): de getypte waarde gaat naar de dichtstbijzijnde.
+WheelInputParser valueListInputParser(
+  List<int> values, {
+  int? Function(String text) parseValue = parseIntInput,
+}) {
+  return (text) {
+    final value = parseValue(text);
+    return value == null ? null : nearestValueIndex(values, value);
+  };
+}

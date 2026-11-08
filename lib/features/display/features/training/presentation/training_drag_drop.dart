@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hs_coaching_app/features/display/features/training/domain/training_tree.dart';
 
@@ -180,6 +182,107 @@ class TrainingGroupTarget extends StatelessWidget {
           child: child,
         );
       },
+    );
+  }
+}
+
+/// Laat een scrollbare lijst vanzelf scrollen terwijl een kaart (een
+/// [TrainingDragPayload]) boven- of onderaan tegen de rand gehouden wordt:
+/// Flutter's `Draggable` doet dat zelf niet, waardoor een kaart niet naar
+/// een plek buiten beeld te slepen was. Twee onzichtbare randstroken boven
+/// de lijst reageren enkel op een sleepbeweging (ze aanvaarden niets), en
+/// scrollen sneller naarmate de vinger/muis dichter bij de rand komt.
+class TrainingDragAutoScroll extends StatefulWidget {
+  const TrainingDragAutoScroll({super.key, required this.builder});
+
+  /// Bouwt de lijst met de [ScrollController] die hier gescrold wordt.
+  final Widget Function(BuildContext context, ScrollController controller)
+  builder;
+
+  @override
+  State<TrainingDragAutoScroll> createState() => _TrainingDragAutoScrollState();
+}
+
+class _TrainingDragAutoScrollState extends State<TrainingDragAutoScroll> {
+  static const _edgeHeight = 64.0;
+  static const _maxSpeed = 18.0; // pixels per tik
+  static const _tick = Duration(milliseconds: 16);
+
+  final _controller = ScrollController();
+  Timer? _timer;
+
+  // Pixels per tik: negatief = omhoog.
+  double _velocity = 0;
+  double _pointerY = 0;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _update(double velocity) {
+    _velocity = velocity;
+    if (velocity == 0) {
+      _timer?.cancel();
+      _timer = null;
+      return;
+    }
+    _timer ??= Timer.periodic(_tick, (_) => _scroll());
+  }
+
+  void _scroll() {
+    if (!_controller.hasClients) return;
+    final position = _controller.position;
+    final target = (position.pixels + _velocity).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    if (target != position.pixels) _controller.jumpTo(target);
+  }
+
+  /// Snelheid voor de pointer op [globalY] in de strook van [context]:
+  /// vol aan de buitenrand, een derde aan de binnenrand.
+  double _speedIn(BuildContext context, double globalY, {required bool top}) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return 0;
+    final local = box.globalToLocal(Offset(0, globalY)).dy;
+    final depth = (top ? 1 - local / _edgeHeight : local / _edgeHeight).clamp(
+      0.0,
+      1.0,
+    );
+    final speed = _maxSpeed * (0.33 + 0.67 * depth);
+    return top ? -speed : speed;
+  }
+
+  Widget _edge({required bool top}) {
+    return Builder(
+      builder: (context) => DragTarget<TrainingDragPayload>(
+        onWillAcceptWithDetails: (_) => false,
+        onMove: (_) => _update(_speedIn(context, _pointerY, top: top)),
+        onLeave: (_) => _update(0),
+        builder: (context, candidate, rejected) =>
+            const SizedBox(height: _edgeHeight, width: double.infinity),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // De [Listener] volgt de echte pointerpositie: `DragTargetDetails.offset`
+    // is de hoek van de sleep-preview, die ver van de vinger kan liggen.
+    return Listener(
+      onPointerMove: (event) => _pointerY = event.position.dy,
+      onPointerUp: (_) => _update(0),
+      onPointerCancel: (_) => _update(0),
+      child: Stack(
+        children: [
+          Positioned.fill(child: widget.builder(context, _controller)),
+          Positioned(top: 0, left: 0, right: 0, child: _edge(top: true)),
+          Positioned(bottom: 0, left: 0, right: 0, child: _edge(top: false)),
+        ],
+      ),
     );
   }
 }

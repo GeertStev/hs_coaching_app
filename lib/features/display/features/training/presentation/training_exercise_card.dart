@@ -22,8 +22,10 @@ const _kZoneValues = ['Bov', 'Ond', 'HaBo', 'HaOn'];
 const _kRepsMin = 1, _kRepsMax = 50, _kRepsStep = 1;
 const _kDistanceMin = 0, _kDistanceMax = 2000, _kDistanceStep = 25;
 const _kIntensityMin = 0, _kIntensityMax = 100, _kIntensityStep = 5;
-const _kSecondsMin = 0, _kSecondsMax = 900, _kSecondsStep = 5;
-const _kDeltaMin = -60, _kDeltaMax = 60, _kDeltaStep = 5;
+// Werk/rust: per seconde tot 2:00, daarboven per 5 s (tot 15:00).
+final _kSecondsValues = secondsWheelValues();
+final _kSecondsItems = [for (final v in _kSecondsValues) _formatSeconds(v)];
+const _kDeltaMin = -60, _kDeltaMax = 60, _kDeltaStep = 1;
 
 String _formatSeconds(int seconds) {
   final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
@@ -315,59 +317,37 @@ class _GroupPanel extends StatelessWidget {
               TrainingValuePill(
                 label: 'Work',
                 title: 'Work time',
-                parseInput: numericInputParser(
-                  min: _kSecondsMin,
-                  max: _kSecondsMax,
-                  step: _kSecondsStep,
+                parseInput: valueListInputParser(
+                  _kSecondsValues,
                   parseValue: parseSecondsInput,
                 ),
-                inputHint: 'e.g. 45 or 1:30',
-                items: numericWheelItems(
-                  min: _kSecondsMin,
-                  max: _kSecondsMax,
-                  step: _kSecondsStep,
-                  format: _formatSeconds,
-                ),
-                initialIndex: numericWheelIndex(
-                  value: group.workSeconds,
-                  min: _kSecondsMin,
-                  max: _kSecondsMax,
-                  step: _kSecondsStep,
+                inputHint: 'e.g. 27, 0:27 or 1:30',
+                items: _kSecondsItems,
+                initialIndex: nearestValueIndex(
+                  _kSecondsValues,
+                  group.workSeconds,
                 ),
                 color: scheme.secondary,
                 onChanged: (index) => onChanged(
-                  group.copyWith(
-                    workSeconds: _kSecondsMin + index * _kSecondsStep,
-                  ),
+                  group.copyWith(workSeconds: _kSecondsValues[index]),
                 ),
               ),
               TrainingValuePill(
                 label: 'Rest',
                 title: 'Rest time',
-                parseInput: numericInputParser(
-                  min: _kSecondsMin,
-                  max: _kSecondsMax,
-                  step: _kSecondsStep,
+                parseInput: valueListInputParser(
+                  _kSecondsValues,
                   parseValue: parseSecondsInput,
                 ),
-                inputHint: 'e.g. 45 or 1:30',
-                items: numericWheelItems(
-                  min: _kSecondsMin,
-                  max: _kSecondsMax,
-                  step: _kSecondsStep,
-                  format: _formatSeconds,
-                ),
-                initialIndex: numericWheelIndex(
-                  value: group.restSeconds,
-                  min: _kSecondsMin,
-                  max: _kSecondsMax,
-                  step: _kSecondsStep,
+                inputHint: 'e.g. 27, 0:27 or 1:30',
+                items: _kSecondsItems,
+                initialIndex: nearestValueIndex(
+                  _kSecondsValues,
+                  group.restSeconds,
                 ),
                 color: scheme.secondary,
                 onChanged: (index) => onChanged(
-                  group.copyWith(
-                    restSeconds: _kSecondsMin + index * _kSecondsStep,
-                  ),
+                  group.copyWith(restSeconds: _kSecondsValues[index]),
                 ),
               ),
               TrainingValuePill(
