@@ -25,15 +25,16 @@ class _AddSketchBackgroundDialogState
 
   Future<void> _pickSvgFile() async {
     try {
-      final result = await FilePicker.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['svg'], // Selecteer enkel SVG bestanden
       );
 
-      if (result != null && result.files.single.path != null) {
+      final path = file?.path;
+      if (file != null && path != null) {
         setState(() {
-          _svgFile = File(result.files.single.path!);
-          _fileName = result.files.single.name;
+          _svgFile = File(path);
+          _fileName = file.name;
         });
       }
     } catch (e, st) {
