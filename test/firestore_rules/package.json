@@ -1,0 +1,14 @@
+{
+  "name": "hs-coaching-firestore-rules-test",
+  "private": true,
+  "type": "module",
+  "description": "Tests van firestore.rules tegen de Firestore-emulator",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-hs-coaching \"node --test\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase": "^12.19.0",
+    "firebase-tools": "^15.35.0"
+  }
+}
