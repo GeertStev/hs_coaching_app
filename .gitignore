@@ -71,4 +71,4 @@ service-account*.json
 serviceAccount*.json
 
 # Tests van firestore.rules (npm)
-node_modules/
+node_modules
