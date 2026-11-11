@@ -11,6 +11,9 @@ abstract final class ConsoleLayout {
   static const double undoWidth = 112;
   static const double dialogWidth = 760;
   static const double sideColumnWidth = 220;
+
+  /// Hoogstens dit deel van de schermbreedte per teamkolom.
+  static const double sideColumnShare = 0.27;
 }
 
 enum ConsoleButtonTone { neutral, primary, danger }

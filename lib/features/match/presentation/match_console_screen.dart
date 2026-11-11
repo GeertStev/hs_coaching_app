@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/core/presentation/error_display.dart';
@@ -130,6 +132,11 @@ class _MatchConsoleScreenState extends ConsumerState<MatchConsoleScreen> {
     final state = view.clock.state;
     final left = state.whiteOnLeft ? TeamColor.white : TeamColor.black;
     final right = opponentOf(left);
+    // Op een telefoon krijgen de teamkolommen minder breedte.
+    final sideWidth = math.min(
+      ConsoleLayout.sideColumnWidth,
+      MediaQuery.sizeOf(context).width * ConsoleLayout.sideColumnShare,
+    );
 
     return Scaffold(
       body: SafeArea(
@@ -137,23 +144,23 @@ class _MatchConsoleScreenState extends ConsumerState<MatchConsoleScreen> {
           padding: EdgeInsets.all(metrics.spacingSm),
           child: Column(
             children: [
-              _Header(view: view, left: left, right: right, onLog: _openLog),
+              _Header(
+                view: view,
+                left: left,
+                right: right,
+                sideWidth: sideWidth,
+                onLog: _openLog,
+              ),
               SizedBox(height: metrics.spacingSm),
               Expanded(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      width: ConsoleLayout.sideColumnWidth,
-                      child: _teamColumn(view, left),
-                    ),
+                    SizedBox(width: sideWidth, child: _teamColumn(view, left)),
                     SizedBox(width: metrics.spacingMd),
                     Expanded(child: _centerColumn(view)),
                     SizedBox(width: metrics.spacingMd),
-                    SizedBox(
-                      width: ConsoleLayout.sideColumnWidth,
-                      child: _teamColumn(view, right),
-                    ),
+                    SizedBox(width: sideWidth, child: _teamColumn(view, right)),
                   ],
                 ),
               ),
@@ -292,6 +299,7 @@ class _MatchConsoleScreenState extends ConsumerState<MatchConsoleScreen> {
           gap,
           DropdownButtonFormField<RestartType>(
             key: const ValueKey('restart-type'),
+            isExpanded: true,
             initialValue: _restartType,
             decoration: const InputDecoration(labelText: 'Next start'),
             items: [
@@ -419,12 +427,14 @@ class _Header extends StatelessWidget {
     required this.view,
     required this.left,
     required this.right,
+    required this.sideWidth,
     required this.onLog,
   });
 
   final MatchConsoleView view;
   final TeamColor left;
   final TeamColor right;
+  final double sideWidth;
   final VoidCallback onLog;
 
   @override
@@ -439,7 +449,7 @@ class _Header extends StatelessWidget {
     final running = clock.playRunning;
 
     Widget team(TeamColor team) => SizedBox(
-      width: ConsoleLayout.sideColumnWidth,
+      width: sideWidth,
       child: Column(
         children: [
           Text(

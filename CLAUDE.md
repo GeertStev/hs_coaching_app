@@ -67,6 +67,18 @@ A module of its own next to home/player/team/screen control, not a content type 
   lease and live-field changes are transactions and need a connection.
 - `data/match_providers.dart`: `matchRepositoryProvider`, `matchDeviceIdProvider` (uuid kept in
   `shared_preferences`), `matchSessionProvider(matchId)` (a family: never a global active match).
+- `presentation/match_console_screen.dart` is the live table console. It takes a `MatchSession` and
+  derives everything from it through `matchConsoleProvider(session)` (clock tick + hints, nothing
+  stored). Every button goes through `ConsoleButton`: ask `session.check(event)` first, pass the
+  `rejectionMessage` as `blockedReason` (grey, reason on long-press). Never enable or disable a
+  button with your own phase logic.
+- Texts live in `presentation/match_texts.dart`, hints (vibrate/sound) are pure in
+  `domain/console_hints.dart`, device effects (wakelock, landscape, haptics) sit behind
+  `consoleDeviceProvider` so widget tests can replace them.
+- Undo is the event log sheet adding an `EventVoided`; nothing is ever removed.
+- `data/practice_match.dart` runs a match on core's `InMemoryMatchRepository` (no Firebase), used by
+  the Match tab and by the widget tests. Widget tests must not call `pumpAndSettle` (the console
+  ticks) and end by unmounting the console.
 - Rules for `matches`, `events` and `fields` are tested against the Firestore emulator:
   `cd test/firestore_rules && npm install && npm test` (needs Java). Run it after touching
   `firestore.rules`; `flutter test` does not cover rules.
