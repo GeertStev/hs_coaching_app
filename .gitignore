@@ -69,3 +69,6 @@ ui-debug.log*
 *-firebase-adminsdk-*.json
 service-account*.json
 serviceAccount*.json
+
+# Tests van firestore.rules (npm)
+node_modules/

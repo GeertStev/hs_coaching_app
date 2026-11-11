@@ -10,6 +10,9 @@ rules_version = '2';
 //     teams/{teamId}                     ploegen
 //     invites/{code}                     uitnodigingen (beheer, alleen admin)
 //     displays/{displayId}/**            display-content (bestaande feature)
+//     matches/{matchId}                  wedstrijd: lease + live-veld
+//       events/{seq}                     eventlog, alleen toevoegen
+//     fields/{fieldId}                   veld: welke wedstrijd er live is
 //   inviteCodes/{code}                   spiegel van invites voor de join-flow:
 //                                        alleen 'get' per code (de code is het
 //                                        geheim), nooit 'list'.
@@ -181,6 +184,53 @@ service cloud.firestore {
       match /displays/{displayId}/{document=**} {
         allow read: if true;
         allow write: if isTrainerOrAdmin(clubId);
+      }
+
+      // ---------------------------------------------------- Wedstrijden
+      // Wedstrijdmodule (specs in hs_coaching_core/docs/uwh/). Lezen staat
+      // open zoals bij displays: scoreborden openen een url zonder login.
+      // Schrijven: trainers en clubadmins (de wedstrijdtafel).
+      match /matches/{matchId} {
+        allow read: if true;
+        allow create, update: if isTrainerOrAdmin(clubId);
+        // Een wedstrijd met een eventlog wordt nooit weggegooid.
+        allow delete: if false;
+
+        // Het eventlog is append-only: aanmaken mag, wijzigen of
+        // verwijderen nooit (corrigeren gaat met een EventVoided-event).
+        // Alleen het toestel dat de lease heeft mag schrijven, en het
+        // document-id is het volgnummer, zodat een tweede event met
+        // hetzelfde nummer een (verboden) update zou zijn.
+        match /events/{eventId} {
+          allow read: if true;
+          allow create: if isTrainerOrAdmin(clubId)
+            && request.resource.data.matchId == matchId
+            && request.resource.data.seq is int
+            && eventId == string(request.resource.data.seq)
+            && holdsLease(request.resource.data.deviceId);
+          allow update, delete: if false;
+
+          function holdsLease(deviceId) {
+            let lease = get(/databases/$(database)/documents/clubs/$(clubId)/matches/$(matchId)).data.lease;
+            return lease != null && lease.deviceId == deviceId;
+          }
+        }
+      }
+
+      // --------------------------------------------------------- Velden
+      // Per veld hooguit één live wedstrijd: een bezet veld kan alleen
+      // vrijgegeven worden (liveMatchId null), niet overschreven door een
+      // andere wedstrijd.
+      match /fields/{fieldId} {
+        allow read: if true;
+        allow create: if isTrainerOrAdmin(clubId);
+        allow update: if isTrainerOrAdmin(clubId)
+          && (
+            resource.data.get('liveMatchId', null) == null
+            || request.resource.data.get('liveMatchId', null) == null
+            || request.resource.data.liveMatchId == resource.data.liveMatchId
+          );
+        allow delete: if false;
       }
     }
 

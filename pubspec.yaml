@@ -39,6 +39,7 @@ dev_dependencies:
   json_serializable: ^6.11.1
   build_runner: ^2.7.1
   freezed: ^3.2.3
+  fake_cloud_firestore: ^4.4.0
 
 flutter:
   uses-material-design: true
