@@ -5,6 +5,7 @@ import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hs_coaching_app/features/auth/data/auth_providers.dart';
 import 'package:hs_coaching_app/features/display/presentation/display_feature_screen.dart';
+import 'package:hs_coaching_app/features/match/presentation/match_home_tab.dart';
 import 'package:hs_coaching_app/features/profile/presentation/user_menu_button.dart';
 import 'package:hs_coaching_app/core/presentation/error_display.dart';
 
@@ -277,6 +278,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             title: 'Team',
             icon: Icons.group,
             content: HomeWelcomeTab(firstName: user.firstName),
+          ),
+          const _HomeTab(
+            title: 'Match',
+            icon: Icons.sports_score,
+            content: MatchHomeTab(),
           ),
           const _HomeTab(
             title: 'Screen control',
