@@ -13,6 +13,10 @@ rules_version = '2';
 //     matches/{matchId}                  wedstrijd: lease + live-veld
 //       events/{seq}                     eventlog, alleen toevoegen
 //     fields/{fieldId}                   veld: welke wedstrijd er live is
+//     players/{playerId}                 Team scheduler: spelerslijst
+//     practiceGames/{gameId}             Team scheduler: wedstrijdlog
+//     ratingAdjustments/{id}             Team scheduler: aanpassingen
+//     schedulerConfig/default            Team scheduler: instellingen
 //   inviteCodes/{code}                   spiegel van invites voor de join-flow:
 //                                        alleen 'get' per code (de code is het
 //                                        geheim), nooit 'list'.
@@ -184,6 +188,27 @@ service cloud.firestore {
       match /displays/{displayId}/{document=**} {
         allow read: if true;
         allow write: if isTrainerOrAdmin(clubId);
+      }
+
+      // ------------------------------------------------- Team scheduler
+      // Spelerslijst, wedstrijdlog, handmatige aanpassingen en instellingen
+      // van de Team scheduler. Ratings volgen hieruit en zijn alleen voor
+      // trainers en clubadmins: spelers en het zwembadscherm lezen dit niet
+      // (het scherm krijgt alleen de gekozen opstelling onder displays).
+      match /players/{playerId} {
+        allow read, write: if isTrainerOrAdmin(clubId);
+      }
+
+      match /practiceGames/{gameId} {
+        allow read, write: if isTrainerOrAdmin(clubId);
+      }
+
+      match /ratingAdjustments/{adjustmentId} {
+        allow read, write: if isTrainerOrAdmin(clubId);
+      }
+
+      match /schedulerConfig/{configId} {
+        allow read, write: if isTrainerOrAdmin(clubId);
       }
 
       // ---------------------------------------------------- Wedstrijden

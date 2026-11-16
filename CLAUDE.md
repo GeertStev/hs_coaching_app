@@ -27,6 +27,7 @@ clubs/{clubId}                  # Club
   teams/{teamId}  invites/{code}  tabataPresets/{id}  trainingTemplates/{id}
   timerExercises/{id}  timerSets/{id}   # legacy timer library, code removed; data + rules remain
   matches/{matchId}/events/{seq}  fields/{fieldId}   # match module, see core's CLAUDE.md
+  players/{id}  practiceGames/{id}  ratingAdjustments/{id}  schedulerConfig/default   # Team scheduler
 inviteCodes/{code}              # get-only mirror for the join flow (the code is the secret)
 users/{uid}                     # AppUser; profile pictures in Storage at user_pictures/{uid}.jpg
 ```
@@ -82,6 +83,18 @@ A module of its own next to home/player/team/screen control, not a content type 
 - Rules for `matches`, `events` and `fields` are tested against the Firestore emulator:
   `cd test/firestore_rules && npm install && npm test` (needs Java). Run it after touching
   `firestore.rules`; `flutter test` does not cover rules.
+
+## Team scheduler (`lib/features/scheduler/`)
+A module of its own like the match module (engine and models: core's `CLAUDE.md`). Built step by
+step; so far only the data layer, no screens yet.
+- `data/scheduler_repository.dart`: `clubs/{clubId}/players`, `practiceGames`, `ratingAdjustments`,
+  `schedulerConfig/default` (`{rating, scheduler}`). App-only, so there is no core base class.
+  `importSheet` writes a parsed sheet export in batches and is safe to repeat (ids come from the sheet).
+- `data/scheduler_providers.dart`: stream providers + `ratingResultProvider`, which recomputes all
+  ratings with core's `computeRatings` whenever anything changes. Never store a rating.
+  `ratingAsOfProvider` is tomorrow (as in the sheet); tests override `schedulerTodayProvider`.
+- Rules: these four collections are readable and writable by trainers/clubAdmins only (ratings are
+  not for players). Emulator tests in `test/firestore_rules/scheduler_rules.test.js`.
 
 ## Gotchas
 - **Riverpod auto-retry:** a failing stream provider (e.g. missing index → `failed-precondition`)
