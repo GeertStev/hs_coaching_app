@@ -86,13 +86,17 @@ A module of its own next to home/player/team/screen control, not a content type 
 
 ## Team scheduler (`lib/features/scheduler/`)
 A module of its own like the match module (engine and models: core's `CLAUDE.md`). Built step by
-step; so far only the data layer, no screens yet.
+step; so far the data layer and the first screens (ranking, players, adjustments, import).
 - `data/scheduler_repository.dart`: `clubs/{clubId}/players`, `practiceGames`, `ratingAdjustments`,
   `schedulerConfig/default` (`{rating, scheduler}`). App-only, so there is no core base class.
   `importSheet` writes a parsed sheet export in batches and is safe to repeat (ids come from the sheet).
 - `data/scheduler_providers.dart`: stream providers + `ratingResultProvider`, which recomputes all
   ratings with core's `computeRatings` whenever anything changes. Never store a rating.
   `ratingAsOfProvider` is tomorrow (as in the sheet); tests override `schedulerTodayProvider`.
+- `presentation/scheduler_home_tab.dart` is the Team tab: ranking per position, sort, add/edit player
+  (`player_edit_screen.dart`, with the player's adjustments) and the sheet import. It only shows
+  for trainers/clubAdmins (`canUseSchedulerProvider`). Widget tests override that provider and
+  `sheetExportPickerProvider` (the file picker).
 - Rules: these four collections are readable and writable by trainers/clubAdmins only (ratings are
   not for players). Emulator tests in `test/firestore_rules/scheduler_rules.test.js`.
 
