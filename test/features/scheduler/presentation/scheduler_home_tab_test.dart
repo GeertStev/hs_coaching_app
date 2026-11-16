@@ -137,9 +137,7 @@ void main() {
     );
 
     // Op rating voorspeler: Bobby (2050) boven Ann (1510).
-    await tester.tap(
-      find.widgetWithText(SegmentedButton<PlayerPosition?>, 'F'),
-    );
+    await tester.tap(find.text('F').first);
     await tester.pumpAndSettle();
     expect(
       tester.getTopLeft(find.text('Bobby')).dy,

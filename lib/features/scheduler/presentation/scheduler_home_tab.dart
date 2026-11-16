@@ -9,6 +9,7 @@ import 'package:hs_coaching_app/features/club/data/club_providers.dart';
 import 'package:hs_coaching_app/features/scheduler/data/scheduler_providers.dart';
 import 'package:hs_coaching_app/features/scheduler/presentation/player_edit_screen.dart';
 import 'package:hs_coaching_app/features/scheduler/presentation/scheduler_texts.dart';
+import 'package:hs_coaching_app/features/scheduler/presentation/team_scheduler_screen.dart';
 import 'package:hs_coaching_core/core/errors/error_reporting.dart';
 import 'package:hs_coaching_core/core/providers/display_device_ids_provider.dart';
 import 'package:hs_coaching_core/scheduler/rating_engine.dart';
@@ -140,7 +141,7 @@ class _RankingViewState extends ConsumerState<_RankingView> {
       icon: const Icon(Icons.upload_file),
       label: const Text('Import sheet export'),
     );
-    final addButton = FilledButton.icon(
+    final addButton = OutlinedButton.icon(
       onPressed: () => _edit(null),
       icon: const Icon(Icons.person_add),
       label: const Text('Add player'),
@@ -235,6 +236,15 @@ class _RankingViewState extends ConsumerState<_RankingView> {
                 label: const Text('Inactive'),
                 selected: _showInactive,
                 onSelected: (value) => setState(() => _showInactive = value),
+              ),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const TeamSchedulerScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.groups),
+                label: const Text('Make teams'),
               ),
               addButton,
               importButton,

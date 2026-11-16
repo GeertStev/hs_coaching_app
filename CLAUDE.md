@@ -97,6 +97,12 @@ step; so far the data layer and the first screens (ranking, players, adjustments
   (`player_edit_screen.dart`, with the player's adjustments) and the sheet import. It only shows
   for trainers/clubAdmins (`canUseSchedulerProvider`). Widget tests override that provider and
   `sheetExportPickerProvider` (the file picker).
+- `domain/schedule_draft.dart`: `scheduleDraftProvider` holds the trainer's choices for one practice
+  (attendance, fixed position/team, teams with composition and substitutes) in memory only;
+  `scheduleResultProvider` runs core's `scheduleTeams` on every change.
+  `presentation/team_scheduler_screen.dart` ("Make teams") shows both: attendance next to the teams
+  on a wide screen, two tabs on a narrow one. Sending the lineup to the pool screen and saving the
+  result are not built yet.
 - Rules: these four collections are readable and writable by trainers/clubAdmins only (ratings are
   not for players). Emulator tests in `test/firestore_rules/scheduler_rules.test.js`.
 
