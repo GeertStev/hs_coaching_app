@@ -3,6 +3,7 @@
 // fields: timestamp (server time of the last cast)
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hs_coaching_core/team/team_lineup.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_core/core/providers/display_device_ids_provider.dart';
@@ -40,6 +41,16 @@ class DisplayTeamRepository {
         .doc(_displayId)
         .collection('settings')
         .doc('team');
+  }
+
+  /// Zet de opstelling van de Team scheduler in `settings/team.lineup` (vorm:
+  /// core's `teamLineupJson`). De timestamp verandert mee, zodat ook een
+  /// scherm dat nog via het Google-script leest ververst.
+  Future<void> castLineup(Map<String, dynamic> lineup) async {
+    await _teamSettingsRef.set({
+      teamLineupField: lineup,
+      'timestamp': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   Future<void> triggerTeamUpdate() async {

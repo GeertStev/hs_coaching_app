@@ -27,6 +27,7 @@ clubs/{clubId}                  # Club
   teams/{teamId}  invites/{code}  tabataPresets/{id}  trainingTemplates/{id}
   timerExercises/{id}  timerSets/{id}   # legacy timer library, code removed; data + rules remain
   matches/{matchId}/events/{seq}  fields/{fieldId}   # match module, see core's CLAUDE.md
+  players/{id}  practiceGames/{id}  ratingAdjustments/{id}  schedulerConfig/default   # Team scheduler
 inviteCodes/{code}              # get-only mirror for the join flow (the code is the secret)
 users/{uid}                     # AppUser; profile pictures in Storage at user_pictures/{uid}.jpg
 ```
@@ -82,6 +83,33 @@ A module of its own next to home/player/team/screen control, not a content type 
 - Rules for `matches`, `events` and `fields` are tested against the Firestore emulator:
   `cd test/firestore_rules && npm install && npm test` (needs Java). Run it after touching
   `firestore.rules`; `flutter test` does not cover rules.
+
+## Team scheduler (`lib/features/scheduler/`)
+A module of its own like the match module (engine and models: core's `CLAUDE.md`). Built step by
+step; so far the data layer and the first screens (ranking, players, adjustments, import).
+- `data/scheduler_repository.dart`: `clubs/{clubId}/players`, `practiceGames`, `ratingAdjustments`,
+  `schedulerConfig/default` (`{rating, scheduler}`). App-only, so there is no core base class.
+  `importSheet` writes a parsed sheet export in batches and is safe to repeat (ids come from the sheet).
+- `data/scheduler_providers.dart`: stream providers + `ratingResultProvider`, which recomputes all
+  ratings with core's `computeRatings` whenever anything changes. Never store a rating.
+  `ratingAsOfProvider` is tomorrow (as in the sheet); tests override `schedulerTodayProvider`.
+- `presentation/scheduler_home_tab.dart` is the Team tab: ranking per position, sort, add/edit player
+  (`player_edit_screen.dart`, with the player's adjustments) and the sheet import. It only shows
+  for trainers/clubAdmins (`canUseSchedulerProvider`). Widget tests override that provider and
+  `sheetExportPickerProvider` (the file picker).
+- `domain/schedule_draft.dart`: `scheduleDraftProvider` holds the trainer's choices for one practice
+  (attendance, fixed position/team, teams with composition and substitutes) in memory only;
+  `scheduleResultProvider` runs core's `scheduleTeams` on every change.
+  `presentation/team_scheduler_screen.dart` ("Make teams") shows both: attendance next to the teams
+  on a wide screen, two tabs on a narrow one. Per pair of teams: "Save result" (`game_result_dialog.dart`)
+  stores a `PracticeGame` (first team = white), and for the first pair "Send to pool screen" writes
+  core's `teamLineupJson` to `settings/team.lineup` through `TeamController.castLineup` and makes
+  Team the live content. The pool screen only shows it when its app source is switched on (see
+  `hs_coaching_screen/CLAUDE.md`).
+- `presentation/games_screen.dart` ("Games" on the Team tab): the log, newest first, with the rating
+  change per player; edit a result or delete a game, ratings recompute by themselves.
+- Rules: these four collections are readable and writable by trainers/clubAdmins only (ratings are
+  not for players). Emulator tests in `test/firestore_rules/scheduler_rules.test.js`.
 
 ## Gotchas
 - **Riverpod auto-retry:** a failing stream provider (e.g. missing index → `failed-precondition`)
