@@ -7,6 +7,7 @@ import 'package:hs_coaching_app/core/presentation/error_display.dart';
 import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/club/data/club_providers.dart';
 import 'package:hs_coaching_app/features/scheduler/data/scheduler_providers.dart';
+import 'package:hs_coaching_app/features/scheduler/presentation/games_screen.dart';
 import 'package:hs_coaching_app/features/scheduler/presentation/player_edit_screen.dart';
 import 'package:hs_coaching_app/features/scheduler/presentation/scheduler_texts.dart';
 import 'package:hs_coaching_app/features/scheduler/presentation/team_scheduler_screen.dart';
@@ -245,6 +246,13 @@ class _RankingViewState extends ConsumerState<_RankingView> {
                 ),
                 icon: const Icon(Icons.groups),
                 label: const Text('Make teams'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const GamesScreen()),
+                ),
+                icon: const Icon(Icons.history),
+                label: const Text('Games'),
               ),
               addButton,
               importButton,

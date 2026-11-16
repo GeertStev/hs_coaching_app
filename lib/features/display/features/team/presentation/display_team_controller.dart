@@ -23,6 +23,18 @@ class TeamController extends AsyncNotifier<void> {
   }
   */
 
+  /// Stuurt de opstelling van de Team scheduler naar het scherm en zet de
+  /// teamweergave actief.
+  Future<void> castLineup(Map<String, dynamic> lineup) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(displayTeamRepositoryProvider).castLineup(lineup);
+      await ref
+          .read(displaySettingsRepositoryProvider)
+          .updateContentType(DisplayContentType.team);
+    });
+  }
+
   /// Triggert een verversing en zet de weergave actief op het scherm
   Future<void> castToScreen() async {
     state = const AsyncLoading();

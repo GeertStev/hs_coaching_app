@@ -9,6 +9,7 @@ import 'package:hs_coaching_app/features/scheduler/domain/schedule_draft.dart';
 import 'package:hs_coaching_app/features/scheduler/presentation/team_scheduler_screen.dart';
 import 'package:hs_coaching_core/core/providers/firebase_providers.dart';
 import 'package:hs_coaching_core/scheduler/scheduler_models.dart';
+import 'package:hs_coaching_core/team/team_lineup.dart';
 
 const _f = PlayerPosition.forward;
 const _g = PlayerPosition.goalie;
@@ -136,6 +137,83 @@ void main() {
     );
     expect(result.unassigned, isEmpty);
   });
+
+  testWidgets('Send to pool screen schrijft de opstelling en zet Team actief', (
+    tester,
+  ) async {
+    for (var i = 1; i <= 13; i++) {
+      controller().setAttending('p${i.toString().padLeft(2, '0')}', true);
+    }
+    controller().setSubstitutes(0, _f, 1);
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Send to pool screen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Lineup sent to the pool screen.'), findsOneWidget);
+
+    final display = firestore
+        .collection('clubs')
+        .doc('holySquid')
+        .collection('displays')
+        .doc('bilzen')
+        .collection('settings');
+    final team = (await display.doc('team').get()).data()!;
+    final teams = teamsFromLineup(team)!;
+    expect(teams, hasLength(2));
+    final result = container.read(scheduleResultProvider)!;
+    // Basisspelers eerst, dan de wissel, met de roepnaam zoals in het blad.
+    expect(
+      [for (final p in teams.first.front) p.name],
+      [
+        for (final e in [
+          ...result.teams.first.base,
+          ...result.teams.first.subs,
+        ])
+          if (e.position == _f) e.playerId,
+      ],
+    );
+    expect(teams.first.front, hasLength(3));
+    expect((await display.doc('content').get()).data()!['contentType'], 'team');
+  });
+
+  testWidgets(
+    'Save result bewaart een oefenwedstrijd en herrekent de ratings',
+    (tester) async {
+      for (var i = 1; i <= 12; i++) {
+        controller().setAttending('p${i.toString().padLeft(2, '0')}', true);
+      }
+      await pumpScreen(tester);
+      final before = container.read(ratingResultProvider).value!;
+      final schedule = container.read(scheduleResultProvider)!;
+
+      await tester.tap(find.text('Save result'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const ValueKey('score-white')), '5');
+      await tester.enterText(find.byKey(const ValueKey('score-black')), '2');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(find.text('Result saved. Ratings are updated.'), findsOneWidget);
+
+      final games = container.read(practiceGamesProvider).value!;
+      expect(games, hasLength(1));
+      final game = games.single;
+      expect(game.date, '2026-11-16');
+      expect(game.durationMinutes, 30);
+      expect(game.white.score, 5);
+      expect(game.black.score, 2);
+      expect(game.white.composition, '2-3-1');
+      expect(game.white.base, schedule.teams[0].base);
+      expect(game.black.base, schedule.teams[1].base);
+
+      // Een winnaar van wit stijgt op zijn positie.
+      final winner = schedule.teams[0].base.first;
+      final after = container.read(ratingResultProvider).value!;
+      expect(
+        after.ratingOf(winner.playerId, winner.position),
+        greaterThan(before.ratingOf(winner.playerId, winner.position)!),
+      );
+    },
+  );
 
   test('ploegen toevoegen, hernoemen en verwijderen', () {
     final draft = controller();

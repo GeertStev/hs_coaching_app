@@ -3,7 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hs_coaching_app/core/theme/app_theme.dart';
 import 'package:hs_coaching_app/features/scheduler/data/scheduler_providers.dart';
 import 'package:hs_coaching_app/features/scheduler/data/scheduler_repository.dart';
+import 'package:hs_coaching_app/features/display/features/team/presentation/display_team_controller.dart';
 import 'package:hs_coaching_app/features/scheduler/domain/schedule_draft.dart';
+import 'package:hs_coaching_app/features/scheduler/presentation/game_result_dialog.dart';
+import 'package:hs_coaching_core/core/errors/error_reporting.dart';
+import 'package:hs_coaching_core/core/errors/user_message.dart';
+import 'package:hs_coaching_core/team/team_lineup.dart';
 import 'package:hs_coaching_core/scheduler/rating_engine.dart';
 import 'package:hs_coaching_core/scheduler/scheduler_models.dart';
 import 'package:hs_coaching_core/scheduler/team_scheduler.dart';
@@ -231,6 +236,10 @@ class _TeamsPane extends ConsumerWidget {
               other: result.teams[index + 1],
               settings: settings,
               ratings: ratings,
+              compositionWhite: draft.teams[index].composition,
+              compositionBlack: draft.teams[index + 1].composition,
+              canCast: index == 0,
+              nameOf: nameOf,
             ),
           _TeamCard(
             index: index,
@@ -246,14 +255,89 @@ class _TeamsPane extends ConsumerWidget {
 }
 
 /// Winstkans en verwachte score van twee ploegen tegen elkaar.
-class _Forecast extends StatelessWidget {
+class _Forecast extends ConsumerWidget {
   const _Forecast({
     required this.schedule,
     required this.team,
     required this.other,
     required this.settings,
     required this.ratings,
+    required this.compositionWhite,
+    required this.compositionBlack,
+    required this.canCast,
+    required this.nameOf,
   });
+
+  final String compositionWhite;
+  final String compositionBlack;
+
+  /// Het zwembadscherm toont één wedstrijd: alleen het eerste paar kan
+  /// erheen.
+  final bool canCast;
+  final String Function(String playerId) nameOf;
+
+  /// Stuurt de opstelling naar het zwembadscherm en zet daar de
+  /// teamweergave aan.
+  Future<void> _cast(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await ref
+        .read(teamControllerProvider.notifier)
+        .castLineup(teamLineupJson(white: team, black: other, nameOf: nameOf));
+    if (!context.mounted) return;
+    final state = ref.read(teamControllerProvider);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          state.hasError
+              ? userMessage(state.error)
+              : 'Lineup sent to the pool screen.',
+        ),
+      ),
+    );
+  }
+
+  /// Bewaart de uitslag als oefenwedstrijd: de eerste ploeg is wit, de
+  /// tweede zwart. De ratings worden daarna vanzelf herrekend.
+  Future<void> _saveResult(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final input = await showGameResultDialog(
+      context,
+      white: team.name,
+      black: other.name,
+      initial: GameResultInput(
+        date: ref.read(schedulerTodayProvider),
+        durationMinutes: settings.scheduler.gameMinutes,
+        scoreWhite: 0,
+        scoreBlack: 0,
+      ),
+    );
+    if (input == null) return;
+    try {
+      await ref
+          .read(schedulerRepositoryProvider)
+          .saveGame(
+            PracticeGame(
+              date: input.date,
+              durationMinutes: input.durationMinutes,
+              white: team.toGameSide(
+                score: input.scoreWhite,
+                composition: compositionWhite,
+              ),
+              black: other.toGameSide(
+                score: input.scoreBlack,
+                composition: compositionBlack,
+              ),
+            ),
+            nowMillis: DateTime.now().millisecondsSinceEpoch,
+          );
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Result saved. Ratings are updated.')),
+      );
+    } on Object catch (error, stack) {
+      reportError(error, stack, context: 'uitslag bewaren');
+      messenger.showSnackBar(SnackBar(content: Text(userMessage(error))));
+    }
+  }
 
   final ScheduleResult schedule;
   final ScheduledTeam team;
@@ -262,9 +346,12 @@ class _Forecast extends StatelessWidget {
   final RatingResult ratings;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final metrics = theme.appMetrics;
+    final casting = ref.watch(teamControllerProvider).isLoading;
+    // Zonder spelers in beide ploegen valt er niets te tonen of te bewaren.
+    final complete = team.base.isNotEmpty && other.base.isNotEmpty;
     final chance = winChance(team, other, settings.rating);
     double? goals(ScheduledTeam a, ScheduledTeam b) => expectedGoals(
       schedule: schedule,
@@ -306,6 +393,26 @@ class _Forecast extends StatelessWidget {
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
+          ),
+          SizedBox(height: metrics.spacingXs),
+          Wrap(
+            spacing: metrics.spacingSm,
+            runSpacing: metrics.spacingXs,
+            children: [
+              if (canCast)
+                FilledButton.icon(
+                  onPressed: complete && !casting
+                      ? () => _cast(context, ref)
+                      : null,
+                  icon: const Icon(Icons.cast),
+                  label: const Text('Send to pool screen'),
+                ),
+              OutlinedButton.icon(
+                onPressed: complete ? () => _saveResult(context, ref) : null,
+                icon: const Icon(Icons.scoreboard_outlined),
+                label: const Text('Save result'),
+              ),
+            ],
           ),
         ],
       ),
